@@ -18,9 +18,9 @@ map runtime.
 ```html
 <!doctype html>
 <link rel="stylesheet"
-  href="https://unpkg.com/@nika-js/onlymap@0.11.11/dist/cartograph.css">
+  href="https://unpkg.com/@nika-js/onlymap@0.12.0/dist/cartograph.css">
 <script type="module"
-  src="https://unpkg.com/@nika-js/onlymap@0.11.11/dist/cartograph.standalone.js"></script>
+  src="https://unpkg.com/@nika-js/onlymap@0.12.0/dist/cartograph.standalone.js"></script>
 
 <om-cartograph size="A4" orientation="landscape" title="Parcel survey" dpi="300">
   <om-text kind="title" x="10" y="8" w="190" h="10">{{title}}</om-text>
@@ -294,6 +294,9 @@ Behaviour fixes a sheet author may have worked around:
   `zoom-to-feature` went to the wrong place.
 - **0.11.6** — Curved labels (`TextOnPathLayer`) take `pickable`, and a click on one reports
   the river or road it names, so a `{{name}}` popup no longer comes up blank.
+- **0.12.0** — A projected frame can show satellite or OpenStreetMap imagery, as an image
+  `TileLayer` in its map. Relief on a projected sheet sits where it belongs; it was a few
+  pixels south at low zoom. A globe (`projection="globe"`) is not allowed in a frame.
 
 For the complete element and attribute reference, see the
 [package cartograph guide](https://github.com/NikaGeospatial/onlymapjs/blob/main/docs/cartograph.md).

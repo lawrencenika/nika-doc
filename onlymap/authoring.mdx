@@ -71,7 +71,7 @@ Dashed lines are a single attribute — `dash="[6, 3]"` (or SVG-style `dash="6 3
 | KML | `data="./tour.kml"` |
 | GPX | `data="./hike.gpx"` — waypoints/tracks/routes → features tagged `_gpxKind`; `#waypoints`/`#tracks`/`#routes` selects one part |
 | FlatGeobuf | `data="./cities.fgb"` — cloud-native binary vector, whole-file decode |
-| GeoParquet | `data="./data.parquet"` (or `.geoparquet`) — cloud-native columnar vector; all-Point files stay columnar, lines/polygons → features; needs `geo` metadata + CRS84/EPSG:4326 (projected CRS errors — reproject first) |
+| GeoParquet | `data="./data.parquet"` (or `.geoparquet`) — cloud-native columnar vector; all-Point files stay columnar, lines/polygons → features; needs `geo` metadata; a file in a local grid is converted <sup>0.12.0</sup> |
 | CityJSON / CityJSONSeq | `data="./tile.city.json"` (or `.city.jsonl`, streamed) — 3D city models; see below |
 | WebSocket stream | `data="wss://feed" key="id" flush="250ms"` — upsert-by-key live entities |
 | Polled REST snapshot | `data="/api/fleet.json" refresh="5s"` |
@@ -81,6 +81,8 @@ Dashed lines are a single attribute — `dash="[6, 3]"` (or SVG-style `dash="6 3
 | Drone JPEG image | `<om-layer type="ImageOverlay" src="./DJI_0123.jpg" georeference="exif">` — georeferenced photo overlay; see below |
 
 `data` is always an address, never the rows themselves: `data='[{…}]'` draws nothing, and the validator reports it as an error <sup>0.11.9</sup>. Put inline rows in a `<script type="application/json">` child instead. A `data` address that fails to load (a typo, a missing file, a blocked request) is reported in the map's validation panel and diagnostics until it loads <sup>0.11.9</sup>.
+
+A file in a national grid or other local coordinate system lands where it belongs <sup>0.12.0</sup> — see [Data in a local grid](#data-in-a-local-grid).
 
 You can add custom formats and stream decoders with `OmMap.registerFormat` and `OmMap.registerSource`. For an authenticated endpoint, use `OmMap.configureData({ headers, credentials, fetch })`. Credentials do not belong in the markup.
 
@@ -348,7 +350,7 @@ The full guide, including per-engine adapter notes, is [docs/routing.md](https:/
 
 To wire your own logic, read the DOM events on `<om-map>`:
 
-- `om-view-changed` fires when the camera settles. `detail` carries the camera and an `origin` of `"user"` or `"programmatic"`. Use `origin` to suppress echoes during state sync.
+- `om-view-changed` fires when the camera settles. `detail` carries the camera and an `origin` of `"user"` or `"programmatic"`. Use `origin` to suppress echoes during state sync. A mouse-wheel zoom on a map with a basemap reports `"user"` <sup>0.12.0</sup>; before, it said `"programmatic"`.
 - `om-map-point` fires on each click or hover. `detail = {coordinate, kind}` — `coordinate` is `[lng, lat]` (or `null` off the map), and `kind` is `"click"` or `"hover"`. It fires on every click and hover, including empty-map clicks a pick discards. This is how you build a tool the `draw` widget does not cover: a distance measurer, a drop-a-pin, a custom rectangle or circle area. Read the coordinate from this event. Do not read deck.gl internals — the map does not expose those. To turn a screen point into a coordinate yourself, call `mapEl.unproject([x, y])` <sup>0.11.5</sup>.
 - `om-tileset-load` gives a `Tile3DLayer`'s live deck `Tileset3D`. `detail = {layerId, tileset}`. Use it for a tool such as region export.
 - `om-route-resolved` fires when a `Route` layer's path is ready. `detail = {layerId, route}` with the normalized geometry, distance, duration, legs, and bounds — see Routes and Live Tracking above.
@@ -356,7 +358,7 @@ To wire your own logic, read the DOM events on `<om-map>`:
 
 To ask the map what is under a point instead of waiting for a click, use the picking methods <sup>0.11.5</sup>. `mapEl.pickAt([x, y])` returns the feature at a screen point, searching 4 pixels around it, or `null`. `mapEl.pickRect({x, y, width, height})` returns every feature inside a box, front to back, up to 100. Both take a `layers` list to narrow the search. They are queries: they do not change the selection, fire `om-map-point`, or run your behaviors. Only `pickable` layers answer. For a tool that must reach every layer, such as a picker that tells an assistant which feature the user means, set `mapEl.pickMode = "all"` while the tool is open and back to `"authored"` when it closes. It is a property, not an attribute, so nothing is written into the map. While it is on, ordinary hover and click see every layer too.
 
-A tool can read the rest of the map without changing it either <sup>0.11.7</sup>. Set `mapEl.diagnostics = true` and the map reports its problems, each with a suggested fix, as `om-validation-error` events after every change. No error panel appears and nothing is written into the page; `mapEl.getDiagnostics()` returns the latest report. Use this rather than adding `validate` from a tool, which edits the author's map. Legend and layer-switcher rows carry `data-layer="<layer id>"`, so a click on a row can be traced to its layer. An overlay's `templateSource` returns its template as written, with the `{{fields}}` it shows.
+A tool can read the rest of the map without changing it either <sup>0.11.7</sup>. Set `mapEl.diagnostics = true` and the map reports its problems — including those on `<om-map>` itself, such as a basemap or projection the map cannot draw <sup>0.12.0</sup> — each with a suggested fix, as `om-validation-error` events after every change. No error panel appears and nothing is written into the page; `mapEl.getDiagnostics()` returns the latest report. Use this rather than adding `validate` from a tool, which edits the author's map. Legend and layer-switcher rows carry `data-layer="<layer id>"`, so a click on a row can be traced to its layer. An overlay's `templateSource` returns its template as written, with the `{{fields}}` it shows.
 
 To mirror state instead of reading events, use `getStore(token)`. It gives a `{subscribe, getSnapshot}` store for each token: `viewport`, `selection`, `layers`, and `data:<id>`. The store works directly with `useSyncExternalStore`, MobX, Redux, or Zustand.
 
@@ -386,11 +388,24 @@ than a silent no-op:
 
 | Limit | Why | Instead |
 |---|---|---|
-| A MapLibre basemap | a second renderer with its own Mercator camera | `basemap="none"` |
+| A MapLibre basemap | a second renderer with its own Mercator camera | `basemap="none"`, plus an image `TileLayer` for imagery <sup>0.12.0</sup> |
+| Vector, terrain or 3D tile layers (`MVTLayer`, a `.pbf` `TileLayer`, `TerrainLayer`, `Tile3DLayer`) | deck indexes their tiles from a Mercator view | image tiles and relief work; load vectors as GeoJSON |
 | `terrain` | the 3D surface and its tiles are Mercator throughout | drop it, or stay Mercator |
 | `pitch` / `bearing` | the projected view is planimetric | rotate the *frame* in the sheet |
 | H3 / S2 / geohash / quadkey layers | deck builds their geometry from a token, inside the layer | convert the cells to polygons |
 | Changing `crs` after boot | re-ingesting is a remount | author two maps |
+
+**Imagery works** on a projected map <sup>new in 0.12.0</sup>. An image `TileLayer` (`…/{z}/{x}/{y}.png`, `.jpg`, `.webp`) is warped tile by tile into the projection and lands within a pixel of where it belongs, so a projected map can have a satellite or OpenStreetMap backdrop:
+
+```html
+<om-map crs="EPSG:27700" basemap="none" center="[-2.5, 54.5]" zoom="5">
+  <om-layer id="base" type="TileLayer" tile-size="256" max-zoom="14"
+            data="https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg"></om-layer>
+  <om-widget type="attribution" text="Sentinel-2 cloudless by EOX IT Services GmbH"></om-widget>
+</om-map>
+```
+
+`basemap="satellite"` on a projected map is still an error — the map never swaps a basemap for you — and its fix is that imagery written as this layer. Tiles you name in a layer are yours to credit; the map credits only the basemaps it picks.
 
 **Relief works** on a projected map, by both routes below. `sun-datum="sheet"` keeps the
 apparent light constant across the plate, the way printed relief atlases do — true north
@@ -400,6 +415,44 @@ read as a printing fault. `sun-datum="geographic"` follows true north instead.
 `reference-scale="1:6500000"` declares the scale the sheet is drawn at, so millimetre
 sizes elsewhere on the map — transform tolerances, buffer widths — resolve to ground
 units. Without it, any `mm` value is a validation error naming this attribute.
+
+### Data in a local grid <sup>new in 0.12.0</sup>
+
+Data whose coordinates are eastings and northings — British National Grid, SVY21, State
+Plane, a UTM zone — is converted to longitude/latitude when it loads, on any map. A file
+that names its own coordinate system needs nothing: a shapefile's `.prj`, a FlatGeobuf or
+GeoParquet header, or a legacy GeoJSON `crs` member is read and applied. Otherwise declare
+it on the layer, which also overrides the file:
+
+```html
+<om-layer type="ScatterplotLayer" data="./sites.csv" crs="EPSG:27700"
+          get-position="[$easting, $northing]"></om-layer>
+```
+
+The common national grids and every UTM zone are built in. Any other EPSG code is looked up
+once at epsg.io; `OmMap.configureCrs({ online: false })` turns that off. Coordinates too
+large to be degrees, with no system named anywhere, are reported in the map's diagnostics
+rather than drawn in the ocean. Datum shifts are the standard seven-parameter ones, good to
+a few metres.
+
+### A globe <sup>new in 0.12.0 · preview</sup>
+
+```html
+<om-map projection="globe" basemap="satellite" center="[-20, 30]" zoom="1.6">
+```
+
+Zoomed out, the Earth is a sphere you can spin; zoom in and it becomes the ordinary flat
+map. Layers, data and `center`/`zoom` are written exactly as for a flat map. It needs a
+basemap, because MapLibre draws the sphere. It switches live — set or remove the attribute,
+or use the `set-projection` action — and a basemap switch keeps it. An `<om-overlay>` on the
+far side of the planet hides, and a click in the space around the globe reports no
+coordinate.
+
+A globe is drawn flat-on and north-up: there is no `pitch` or `bearing`. Text, icon and
+popup-badge layers, arcs, heatmap-style aggregation layers and terrain cannot draw on a
+globe yet, and each is a validation error with a fix — labels go in `<om-overlay>`
+elements, routes in a `PathLayer` through points along the route. A globe cannot sit in a
+cartograph frame, and cannot be combined with `crs`.
 
 ### Shaded relief <sup>new in 0.9.1</sup>
 
