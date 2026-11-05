@@ -2,7 +2,7 @@
   {
     "repo": "NikaGeospatial/geoengine",
     "outputPath": "nika-geoengine/releases.mdx",
-    "title": "NIKA GeoEngine Releases",
+    "title": "NIKA GeoEngine CLI Releases",
     "description": "Release notes synced from GitHub",
     "includePrereleases": false
   }

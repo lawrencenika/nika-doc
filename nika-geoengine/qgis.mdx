@@ -1,6 +1,6 @@
 ---
 title: "Use with QGIS"
-description: "Integrate NikaGeoEngine and NikaPlanet cloud services natively into QGIS"
+description: "Integrate NIKA GeoEngine CLI and NikaPlanet cloud services natively into QGIS"
 icon: "plug"
 ---
 
@@ -8,7 +8,7 @@ icon: "plug"
 
 Nika provides robust integration with QGIS. By bringing the isolated compute power of Docker-based scripting and the seamless cloud orchestration of NikaPlanet directly into the QGIS Processing Toolbox, you receive the ultimate hybrid workflow.
 
-## 1. NikaGeoEngine Plugin (For Analysts & Developers)
+## 1. NIKA GeoEngine CLI Plugin (For Analysts & Developers)
 
 The **GeoEngine Plugin for QGIS** instantly translates any local containerized scripts into native QGIS Processing tools.
 
@@ -16,7 +16,7 @@ The **GeoEngine Plugin for QGIS** instantly translates any local containerized s
 
 Historically, creating a QGIS Plugin or Processing tool from a python algorithm requires learning QGIS's specific PyQt APIs and processing frameworks. This typically leads to massive wrapper code overhead and a dependency nightmare across your team's different devices.
 
-NikaGeoEngine bypasses this barrier:
+NIKA GeoEngine CLI bypasses this barrier:
 
 - **CLI-Native Subprocessing**: QGIS plugins execute your workers as pure subprocesses via the GeoEngine CLI without any proxy service. QGIS stamps local worker runs with `--actor QGIS`, so CLI run history shows where each execution came from. You write plain Python/R, declare its dependencies gracefully across `pixi.toml` and Docker configurations, and GeoEngine handles mapping parameters transparently to the container.
 - **Automatic Discoverability**: The plugin executes `geoengine workers` to index your available algorithms automatically. Your tool populates directly into the QGIS Processing Toolbox with zero GUI code required.

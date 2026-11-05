@@ -1,0 +1,139 @@
+---
+title: "Build fullstack map processing with OnlyMapJS"
+sidebarTitle: "Build fullstack map processing with OnlyMapJS"
+mode: "wide"
+description: "Pair OnlyMap JS in the browser with NIKA GeoEngine on Kubernetes: run satellite imagery batch jobs from a map and stream COG results with no tile server."
+---
+
+Most geo applications need two halves: a front end that makes large data easy to explore, and a backend that can actually process it. [OnlyMap JS](/onlymap/overview) is the first, NIKA GeoEngine is the second, and they are built to meet in the middle.
+
+<Columns cols={2}>
+  <Card title="Front end: OnlyMap JS" icon="map">Projection-aware WebGL maps from declarative HTML. Streams COG and Zarr rasters straight from storage, and polls live data.</Card>
+  <Card title="Backend: NIKA GeoEngine" icon="server">Batch jobs that fan out on CPU, high-memory and GPU pools, behind role-based access, writing COG, Zarr and GeoJSON.</Card>
+</Columns>
+
+## How they connect
+
+<Frame>
+  <img className="ge-v ge-wide ge-light" src="/images/geoengine/onlymap-flow-light.svg" alt="OnlyMap in the browser calls your app API, which submits a batch job to NIKA GeoEngine; tasks write results to storage that OnlyMap streams directly" width="900" height="346" loading="lazy" style={{ width: "100%", height: "auto" }} />
+  <img className="ge-v ge-wide ge-dark" src="/images/geoengine/onlymap-flow-dark.svg" alt="" width="900" height="346" loading="lazy" style={{ width: "100%", height: "auto" }} />
+  <img className="ge-v ge-tall ge-light" src="/images/geoengine/onlymap-flow-tall-light.svg" alt="" width="460" height="646" loading="lazy" style={{ width: "100%", height: "auto" }} />
+  <img className="ge-v ge-tall ge-dark" src="/images/geoengine/onlymap-flow-tall-dark.svg" alt="" width="460" height="646" loading="lazy" style={{ width: "100%", height: "auto" }} />
+</Frame>
+
+- **No tile server in between.** Workers write Cloud-Optimised GeoTIFF or Zarr; OnlyMap's `COGLayer` and `ZarrLayer` read only the parts on screen, by HTTP range request.
+- **Progress is just data.** A layer with `refresh="2s"` polls the job's task list, so tiles light up on the map as tasks finish.
+- **Credentials stay out of markup.** `OmMap.configureData()` adds your token to every data-layer request, polling included, so the task list can sit behind your app's authentication.
+- **Rasters are fetched directly by the browser.** `COGLayer` and `ZarrLayer` do not route through `configureData`. Serve COG results same-origin through your app, where the browser sends the user's session cookie, or from a CORS-enabled store. Authenticated Zarr stores are not supported yet, so use Zarr for results that may be public and COG behind your app for sensitive ones.
+- **Access control carries through.** A user who isn't cleared for a restricted worker is refused at the gateway, and the map says so.
+
+## Try it
+
+Pick a scenario and run a batch job. Each square is one task on one pod. Switch the scenario to **New-building detection** and run it as an **Analyst** to see a restricted worker refused.
+
+<div className="ge-demo">
+  <iframe
+    src="/geoengine/onlymap-demo.html"
+    title="OnlyMap JS on NIKA GeoEngine demo"
+    width="100%"
+    height="560"
+    loading="lazy"
+    frameBorder="0"
+    style={{ display: "block" }}
+  />
+</div>
+
+<p style={{ marginTop: "10px", fontSize: "14px" }}>
+  Demo: the backend's responses are simulated in the page. The map, layers and polling are real OnlyMap JS. <a href="/geoengine/onlymap-demo.html" target="_blank" rel="noopener noreferrer">Open the demo full screen &rarr;</a>
+</p>
+
+## The front-end code
+
+The whole map is markup. Your app API proxies two calls to NIKA GeoEngine: create the job, and return its tasks as GeoJSON.
+
+```html index.html
+<link rel="stylesheet" href="https://unpkg.com/@nika-js/onlymap@0.12.1/dist/onlymapjs.css">
+<script type="module">
+  import { OmMap } from "https://unpkg.com/@nika-js/onlymap@0.12.1";
+  OmMap.configureData({ headers: { Authorization: `Bearer ${sessionToken}` } });
+</script>
+
+<om-map basemap="satellite" center="[5.56, 52.52]" zoom="10">
+  <!-- results: a COG written by the batch job, served same-origin by your app and streamed by range request -->
+  <om-layer id="ndvi" type="COGLayer"
+            src="/results/2026-11/flevoland/ndvi.tif"
+            min="0" max="1" colormap="viridis"></om-layer>
+
+  <!-- progress: one polygon per task, re-polled every 2 seconds -->
+  <om-layer id="tasks" type="GeoJsonLayer"
+            data="https://app.example.com/api/jobs/j-7q2c9xk4/tasks.geojson" refresh="2s"
+            get-fill-color="$fill" get-line-color="[255,255,255,140]"
+            line-width-min-pixels="1" pickable></om-layer>
+
+  <om-widget type="legend" position="bottom-end"></om-widget>
+</om-map>
+```
+
+## What teams build with the pair
+
+<CardGroup cols={2}>
+  <Card title="Crop monitoring from cloud-free mosaics" icon="wheat-awn">
+    **Need:** field-by-field vegetation health every month, despite cloud.
+
+    **Backend:** `cloud-removal` builds a monthly Sentinel-2 composite per tile on the high-memory class; a second worker computes mean NDVI per field.
+
+    **On the map:** the composite as a `COGLayer`, fields coloured by NDVI, and a month slider with the `filter` widget.
+  </Card>
+  <Card title="Flood extent within hours" icon="water">
+    **Need:** where the water is after a storm, while clouds still cover optical satellites.
+
+    **Backend:** Argo Events starts a batch job when a Sentinel-1 radar scene lands; a CPU worker compares it with a dry baseline, tile by tile.
+
+    **On the map:** the flood mask over the satellite basemap, with affected roads and facilities as `PopupLayer` badges.
+  </Card>
+  <Card title="New-building detection at sensitive sites" icon="lock">
+    **Need:** flag construction across very high-resolution imagery of sites few people may see.
+
+    **Backend:** a restricted GPU worker runs a change-detection model; only the cleared role can submit it, and results stay in the cluster's storage.
+
+    **On the map:** before and after imagery as COGs served through your app, a layer switcher, and detected footprints as polygons for review.
+  </Card>
+  <Card title="Burn severity after wildfire" icon="fire">
+    **Need:** a severity map for recovery teams days after containment.
+
+    **Backend:** a CPU worker computes dNBR from pre- and post-fire Sentinel-2 scenes, fanned out per tile, and writes a classified COG.
+
+    **On the map:** a `COGLayer` with a threshold legend of severity classes, over shaded relief from `HillshadeLayer`.
+  </Card>
+  <Card title="Heat stress from climate data cubes" icon="temperature-high">
+    **Need:** district-level heat-stress days from decades of reanalysis data.
+
+    **Backend:** a high-memory worker reads the cube, computes the index per year and writes a public, CORS-enabled Zarr store plus a district table.
+
+    **On the map:** a `ZarrLayer` with a year selector, beside a district choropleth and a chart widget.
+  </Card>
+  <Card title="Drone inspection of solar farms" icon="solar-panel">
+    **Need:** find failing panels from thousands of thermal drone photos per site.
+
+    **Backend:** a GPU worker builds the orthomosaic and detects hot spots, one batch per flight.
+
+    **On the map:** the orthomosaic as a `COGLayer`, each original photo as a geotagged `ImageOverlay`, and defects clustered by row.
+  </Card>
+</CardGroup>
+
+## Why the pair works
+
+| Need | OnlyMap JS | NIKA GeoEngine |
+|---|---|---|
+| Huge rasters | Streams only what is on screen | Processes them on machines sized to fit |
+| Many scenes | Shows progress task by task | Fans out across pods |
+| Sensitive data | Keeps tokens out of markup; reads sensitive COGs through your app | Restricts workers to cleared roles; data stays in your cluster |
+| Projections | Draws in national grids and equal-area projections | Reprojects with GDAL and PROJ in every worker |
+
+## Next steps
+
+<CardGroup cols={3}>
+  <Card title="Build your first worker" icon="cube" href="/geoengine/workers">Manifest, inputs and batch habits.</Card>
+  <Card title="Connect your pipeline" icon="plug" href="/geoengine/integrations">Argo, Kubeflow, FME Flow, ArcGIS.</Card>
+  <Card title="OnlyMap JS docs" icon="map" href="/onlymap/overview">Layers, widgets and live data.</Card>
+</CardGroup>

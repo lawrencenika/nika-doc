@@ -1,0 +1,309 @@
+---
+title: "Argo, Kubeflow, FME Flow and ArcGIS with NIKA GeoEngine"
+sidebarTitle: "Integrations"
+description: "Call NIKA GeoEngine from Argo Workflows, Kubeflow Pipelines or FME Flow, and share results with ArcGIS Image Server within each vendor's licence terms."
+---
+
+Keep the tools you already run. Call NIKA GeoEngine from Argo Workflows, Kubeflow Pipelines or FME Flow, and share results with imagery servers such as ArcGIS Image Server, for the steps that need GPUs, high memory or controlled access.
+
+## Integrate the way each vendor allows
+
+Every pattern on this page keeps each product inside its own licence terms.
+
+<CardGroup cols={2}>
+  <Card title="Each product's own installer" icon="box-open">FME Flow with Safe Software's Helm chart, ArcGIS Enterprise on Kubernetes with Esri's deployment tools. NIKA GeoEngine never repackages, redistributes or wraps another vendor's software.</Card>
+  <Card title="Your licence, your seat count" icon="id-card">Each product runs under the licence you hold for it, and the vendor's own engine and core limits keep applying.</Card>
+  <Card title="Documented interfaces only" icon="plug">Public REST APIs, webhooks and shared storage formats such as Cloud-Optimised GeoTIFF. No private endpoints, and no automating desktop products.</Card>
+  <Card title="Separate namespaces and nodes" icon="layer-group">Each product gets its own namespace, quota and node pool, so neither starves the other.</Card>
+</CardGroup>
+
+<Warning>
+  **FME: use FME Flow for automation.** Safe Software's licence does not allow FME Form (formerly FME Desktop) to be used as a stand-alone translation service for others. Server-side automation belongs on FME Flow. Never run FME Form inside a worker. Confirm your use with Safe Software if it is unusual.
+</Warning>
+
+## The integration contract
+
+Every integration does the same three things. Only the tool that makes the calls changes.
+
+<Note>
+  **Illustrative API shape.** Paths and fields show the pattern. The released job API gives the final names; the surrounding Argo, Kubeflow or FME logic does not change.
+</Note>
+
+
+<Steps>
+  <Step title="Submit">
+    Send the worker, exact version, machine class and inputs, plus the item list for a batch.
+
+    ```http
+    POST https://<geoengine-host>/v1/jobs
+    Authorization: Bearer <service-account-token>
+    Content-Type: application/json
+
+    {
+      "worker": "cloud-removal-ndvi",
+      "version": "2.3.1",
+      "machine_class": "highmem",
+      "inputs": { "output-dir": "s3://results/2026-11/flevoland" },
+      "items": [
+        { "scene": "s3://scenes/S2B_31UFU_20261102.tif" },
+        { "scene": "s3://scenes/S2B_31UFU_20261105.tif" }
+      ]
+    }
+    ```
+
+    ```json
+    { "job_id": "j-7q2c9xk4", "status": "queued", "tasks": 2 }
+    ```
+  </Step>
+  <Step title="Poll">
+    `GET /v1/jobs/j-7q2c9xk4` until `completed` or `failed`.
+  </Step>
+  <Step title="Read the outputs">
+    Read results from shared storage. Later steps, maps and imagery servers read from the same place.
+  </Step>
+</Steps>
+
+### Rules that keep integrations robust
+
+- **Service account per pipeline,** granted only the workers it needs, restricted ones included.
+- **Pin the worker version.** Never "latest" in production.
+- **Fail the step when the job fails,** set a timeout longer than your longest job, and cancel the job if the step gives up waiting.
+- **Keep the step thin.** It submits and waits; the compute runs on NIKA GeoEngine's pools.
+- **Keep the token in a secret,** never in a pipeline definition.
+
+## Choose your tool
+
+<Tabs>
+  <Tab title="Argo Workflows">
+    Argo keeps ownership of ordering, retries and triggers; NIKA GeoEngine runs the geoprocessing step. Argo is Apache-2.0 licensed, so you are free to wrap it this way. Package the call once as a `WorkflowTemplate`.
+
+    ```bash
+    kubectl create secret generic geoengine-token \
+      --namespace argo --from-literal=token=<service-account-token>
+    ```
+
+    ```yaml geoengine-job.yaml
+    apiVersion: argoproj.io/v1alpha1
+    kind: WorkflowTemplate
+    metadata:
+      name: geoengine-job
+      namespace: argo
+    spec:
+      templates:
+        - name: run
+          inputs:
+            parameters:
+              - name: worker
+              - name: version
+              - name: machine-class
+                value: cpu
+              - name: payload              # JSON: inputs and items
+              - name: timeout-seconds          # how long the script waits for the job
+                value: "7200"
+              - name: deadline-seconds         # hard stop for the pod; keep it above timeout-seconds
+                value: "7500"
+          activeDeadlineSeconds: "{{inputs.parameters.deadline-seconds}}"
+          retryStrategy:
+            limit: "2"
+            retryPolicy: OnError           # pod-level errors only
+          script:
+            image: python:3.12-slim
+            command: [python]
+            env:
+              - { name: GEOENGINE_URL, value: "https://<geoengine-host>" }
+              - name: GEOENGINE_TOKEN
+                valueFrom: { secretKeyRef: { name: geoengine-token, key: token } }
+              - { name: WORKER, value: "{{inputs.parameters.worker}}" }
+              - { name: VERSION, value: "{{inputs.parameters.version}}" }
+              - { name: MACHINE_CLASS, value: "{{inputs.parameters.machine-class}}" }
+              - { name: PAYLOAD, value: "{{inputs.parameters.payload}}" }
+              - { name: TIMEOUT, value: "{{inputs.parameters.timeout-seconds}}" }
+            source: |
+              import json, os, sys, time, urllib.error, urllib.request
+
+              base = os.environ["GEOENGINE_URL"].rstrip("/")
+              headers = {"Authorization": "Bearer " + os.environ["GEOENGINE_TOKEN"],
+                         "Content-Type": "application/json"}
+
+              def call(method, path, body=None):
+                  data = json.dumps(body).encode() if body is not None else None
+                  req = urllib.request.Request(base + path, data=data, method=method, headers=headers)
+                  with urllib.request.urlopen(req, timeout=30) as resp:
+                      return json.load(resp)
+
+              body = json.loads(os.environ["PAYLOAD"])
+              body.update(worker=os.environ["WORKER"], version=os.environ["VERSION"],
+                          machine_class=os.environ["MACHINE_CLASS"])
+              job_id = call("POST", "/v1/jobs", body)["job_id"]
+              print("submitted " + job_id, file=sys.stderr)
+
+              deadline, errors = time.time() + int(os.environ["TIMEOUT"]), 0
+              while time.time() < deadline:
+                  try:
+                      status = call("GET", "/v1/jobs/" + job_id)["status"]
+                  except urllib.error.HTTPError as exc:
+                      if exc.code < 500:            # auth or request problem: retrying will not help
+                          sys.exit("gateway returned HTTP " + str(exc.code) + " for job " + job_id)
+                      status = None                 # 5xx: treat like a network blip
+                  except OSError:                   # network blip while polling
+                      status = None
+                  if status is None:
+                      errors += 1
+                      if errors > 5:
+                          sys.exit("lost contact with the gateway while polling job " + job_id)
+                  else:
+                      errors = 0
+                      if status == "completed":
+                          print(job_id)             # the step's output
+                          sys.exit(0)
+                      if status == "failed":
+                          sys.exit("job " + job_id + " failed")
+                  time.sleep(15)
+              try:                                  # nobody is waiting any more: stop the job
+                  call("POST", "/v1/jobs/" + job_id + "/cancel")
+              except OSError:
+                  pass
+              sys.exit("job " + job_id + " timed out and was cancelled")
+    ```
+
+    Use it from any workflow with `templateRef: { name: geoengine-job, template: run }`, and pass the step's `outputs.result` (the job ID) to later steps.
+
+    <Warning>**Retries submit a new job.** The template retries pod-level errors only (`OnError`). A worker bug would fail again and spend compute twice, so keep workers safe to rerun. Keep `deadline-seconds` above `timeout-seconds`, so the script can cancel a job it gives up on before Argo stops the pod.</Warning>
+
+    **Trigger on new data** with an Argo Events Sensor that creates the Workflow when a scene lands. **Using Argo CD?** Keep the template in Git with your other applications.
+  </Tab>
+  <Tab title="Kubeflow Pipelines">
+    Make the heavy geospatial step a Kubeflow component that delegates to NIKA GeoEngine. Kubeflow Pipelines is Apache-2.0 licensed.
+
+    ```python monthly_ndvi.py
+    from kfp import compiler, dsl, kubernetes
+
+
+    @dsl.component(base_image="python:3.12-slim")
+    def run_geoengine_job(worker: str, version: str, machine_class: str,
+                          payload_json: str, base_url: str,
+                          timeout_seconds: int = 7200) -> str:
+        import json, os, time, urllib.error, urllib.request
+
+        headers = {"Authorization": "Bearer " + os.environ["GEOENGINE_TOKEN"],
+                   "Content-Type": "application/json"}
+
+        def call(method, path, body=None):
+            data = json.dumps(body).encode() if body is not None else None
+            req = urllib.request.Request(base_url.rstrip("/") + path, data=data,
+                                         method=method, headers=headers)
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                return json.load(resp)
+
+        body = json.loads(payload_json)
+        body.update(worker=worker, version=version, machine_class=machine_class)
+        job_id = call("POST", "/v1/jobs", body)["job_id"]
+
+        deadline, errors = time.time() + timeout_seconds, 0
+        while time.time() < deadline:
+            try:
+                status = call("GET", "/v1/jobs/" + job_id)["status"]
+            except urllib.error.HTTPError as exc:
+                if exc.code < 500:                  # auth or request problem: retrying will not help
+                    raise RuntimeError("gateway returned HTTP %d for job %s" % (exc.code, job_id))
+                status = None
+            except OSError:                         # network blip while polling
+                status = None
+            if status is None:
+                errors += 1
+                if errors > 5:
+                    raise RuntimeError("lost contact with the gateway while polling job " + job_id)
+            else:
+                errors = 0
+                if status == "completed":
+                    return job_id
+                if status == "failed":
+                    raise RuntimeError("job " + job_id + " failed")
+            time.sleep(15)
+        try:                                        # nobody is waiting any more: stop the job
+            call("POST", "/v1/jobs/" + job_id + "/cancel")
+        except OSError:
+            pass
+        raise RuntimeError("job " + job_id + " timed out and was cancelled")
+
+
+    @dsl.pipeline(name="monthly-ndvi")
+    def monthly_ndvi(base_url: str, payload_json: str):
+        job = run_geoengine_job(worker="cloud-removal-ndvi", version="2.3.1",
+                                machine_class="highmem", payload_json=payload_json,
+                                base_url=base_url)
+        kubernetes.use_secret_as_env(job, secret_name="geoengine-token",
+                                     secret_key_to_env={"token": "GEOENGINE_TOKEN"})
+
+
+    compiler.Compiler().compile(monthly_ndvi, "monthly_ndvi.yaml")
+    ```
+
+    | Fan-out with… | Choose when |
+    |---|---|
+    | **One batch job** (recommended) | Items share one worker and class; you want one job ID and one resource record. |
+    | **`dsl.ParallelFor`** | Items need different workers or versions. Cap it with `parallelism=`. |
+
+    Create the token secret in each profile namespace, and allow that namespace to reach the gateway if a service mesh restricts traffic.
+  </Tab>
+  <Tab title="FME Flow">
+    FME Flow is strong at data integration across hundreds of formats; NIKA GeoEngine is strong at heavy imagery processing. A common shape: FME on the edges (ingest, then publish), NIKA GeoEngine in the middle.
+
+    **An FME Flow workspace calls NIKA GeoEngine**
+
+    | Step | Transformer | What it does |
+    |---|---|---|
+    | Submit | HTTPCaller | `POST /v1/jobs` with the JSON body and a bearer token from an FME Flow web connection |
+    | Read the ID | JSONExtractor | Extracts `job_id` |
+    | Wait | HTTPCaller in a looping custom transformer, with a Decelerator | Polls the status every few seconds |
+    | Decide | Tester, Terminator | Continues on `completed`, fails the workspace on `failed` |
+
+    **NIKA GeoEngine results start FME Flow work.** When a batch completes, your pipeline calls FME Flow's **REST API V4** (`/fmeapiv4/…`) to submit a workspace, or posts to an **Automation webhook** to load results into an enterprise database.
+
+    <Warning>**Use REST API V4.** V3 is removed from FME Flow 2026.1, and from 2026.1 a trailing slash on a V4 endpoint can return `404`.</Warning>
+
+    **Both on one cluster**
+
+    - Deploy FME Flow with **Safe Software's official Helm chart**, in its own namespace, under your FME Flow licence.
+    - Define engine groups in its Helm values, and pin them to FME's own nodes with `nodeSelector` and `tolerations`. Standard and CPU-usage engines stay counted by FME Flow's own licensing.
+    - Point both products at the same storage so data flows between them without copies.
+  </Tab>
+  <Tab title="ArcGIS Image Server">
+    ArcGIS Image Server publishes and analyses imagery for ArcGIS clients. NIKA GeoEngine runs the custom, GPU-heavy or restricted processing around it. They meet in shared storage, not inside each other.
+
+    **Pattern: NIKA GeoEngine produces, Image Server serves**
+
+    1. **Write Cloud-Optimised GeoTIFFs** from your workers to an object store bucket.
+    2. **Register that bucket** as a cloud store in ArcGIS Enterprise, using ArcGIS's own data store registration.
+    3. **Create or refresh imagery layers** from the new rasters through ArcGIS's public REST API or ArcGIS API for Python, triggered by your pipeline when the batch completes.
+
+    ArcGIS users get the results as hosted imagery layers. OnlyMap apps can stream the same COGs directly with no extra copy.
+
+    | Use ArcGIS Image Server for | Use NIKA GeoEngine for |
+    |---|---|
+    | Serving imagery to ArcGIS clients | Your own Python or R, and open-source models |
+    | ArcGIS raster functions and raster analytics your analysts already use | GPU inference that needs specific CUDA libraries |
+    | | Workers restricted to cleared roles |
+    | | Large fan-out across hundreds of scenes |
+
+    **Both on one cluster**
+
+    - Deploy ArcGIS Enterprise on Kubernetes with **Esri's deployment tools**, into the dedicated namespace Esri requires, on a supported environment.
+    - Image hosting and distributed raster analysis carry their own Esri licences (Image Services, Raster Analytics). They stay with your ArcGIS deployment, not with NIKA GeoEngine.
+    - Give each product its own quota and node pool. Both autoscale independently within one cluster.
+  </Tab>
+  <Tab title="Anything else">
+    Anything that can make an HTTPS call can submit a job: Airflow, Dagster, Prefect, GitHub Actions, cron or a script. Use the contract above with the same rules: service account, pinned version, fail on failure, timeout, thin step.
+  </Tab>
+</Tabs>
+
+## Sharing one cluster
+
+| Concern | Recommendation |
+|---|---|
+| **Namespaces** | One per product, each with its own quota |
+| **Node pools** | NIKA GeoEngine's CPU, high-memory and GPU pools tainted and separate from other products' pools |
+| **Pipeline step pods** | Thin clients on a general pool, with no GPU or high-memory requests |
+| **Storage** | One shared object store or volume, so outputs flow between tools without copies |
+| **Network** | Explicit rules for each namespace that calls the gateway |
+| **Access** | Cluster RBAC for who administers each product; roles in NIKA GeoEngine for who runs each worker |

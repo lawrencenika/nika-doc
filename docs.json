@@ -206,7 +206,19 @@
 							},
 							{
 								"group": "NIKA GeoEngine",
-								"icon": "cube",
+								"icon": "server",
+								"pages": [
+									"geoengine/overview",
+									"geoengine/deploy",
+									"geoengine/workers",
+									"geoengine/observability",
+									"geoengine/integrations",
+									"geoengine/onlymap-fullstack"
+								]
+							},
+							{
+								"group": "NIKA GeoEngine CLI",
+								"icon": "terminal",
 								"pages": [
 									"nika-geoengine/overview",
 									{

@@ -1,0 +1,93 @@
+---
+title: "Right-Size GPU, CPU and RAM per Geoprocessing Worker"
+sidebarTitle: "Observability"
+mode: "wide"
+description: "Every NIKA GeoEngine run records runtime and CPU, memory and GPU use over time, so you can pick the right machine class for each worker from evidence."
+---
+
+import { GeRunChart, GeBatchChart, GeReservedChart } from "/snippets/geoengine/charts.jsx";
+
+Every run records its runtime and its CPU, memory and GPU use over time. That turns "how big a machine does this worker need?" from a guess into a reading.
+
+<CardGroup cols={3}>
+  <Card title="Every 30 s" icon="microchip">CPU and memory samples</Card>
+  <Card title="Every 5 s" icon="bolt">GPU use, GPU memory and power</Card>
+  <Card title="Every run" icon="clock-rotate-left">Including failed and stopped ones</Card>
+</CardGroup>
+
+GPU samples are the average of the driver's own high-frequency readings, so short spikes are not missed between samples. Records are saved throughout the run and again when a task stops, so a task killed for running out of memory still leaves its curve behind. Recording never fails a run.
+
+## Read one run
+
+A land-cover classification run on the GPU class: 64 GiB of RAM and one GPU, 42 minutes. Hover to read all three signals at once.
+
+<CardGroup cols={4}>
+  <Card title="42 min">Runtime</Card>
+  <Card title="34.2 GiB">Peak memory, of 64 GiB</Card>
+  <Card title="4.0 cores">Peak CPU, of 8</Card>
+  <Card title="76%">Of the run with the GPU busy</Card>
+</CardGroup>
+
+<div className="ge-slot ge-slot-run">
+  <GeRunChart />
+</div>
+
+- **Memory peaks at stitching, not inference.** Size for the peak: 64 GiB is safe, 32 GiB would be killed at minute 28.
+- **CPU is busy only while loading and writing.** Eight cores is generous; four would do.
+- **The GPU dips every two minutes** while the next tile is read. Faster storage, or prefetching the next tile, buys time on the most expensive node.
+
+## Right-size across a batch
+
+One run shows a shape. A batch shows the spread. These are the peak memory figures for the 200 tasks of a `cloud-removal-ndvi` batch. Pick a class and a headroom margin to see what would happen.
+
+<div className="ge-slot ge-slot-hist">
+  <GeBatchChart />
+</div>
+
+Three outlier scenes push the whole batch up a class. Tiling those three lets the other 197 run on a class half the size. That is the kind of decision this data makes obvious.
+
+## Find reserved capacity you don't use
+
+Requested memory (track) against the 95th-percentile peak (bar) for each worker, across its last 30 days of runs.
+
+<div className="ge-slot ge-slot-bullet">
+  <GeReservedChart />
+</div>
+
+Reserved but unused memory is capacity no other task can use. Cutting a class in half doubles how many tasks a pool runs at once, at the same cost.
+
+## Three decisions the data answers
+
+| Decision | Read | Rule of thumb |
+|---|---|---|
+| **Which class?** | Peak memory across a batch | Smallest class above the largest peak plus 15–25% |
+| **Is the GPU worth it?** | GPU utilisation over the run | Mostly under 30%: the work is I/O- or CPU-bound, so try the CPU class |
+| **How big a pool?** | Runtime and concurrency per batch | Pool maximum = items ÷ acceptable waves |
+
+NIKA can also review your run records and advise how to optimise each workload.
+
+## Get the data
+
+Metrics are available per task. Each series names its columns and sample interval, then lists one row per sample. The endpoint path and response shape below are illustrative; the released API reference gives the final names.
+
+```http
+GET https://<geoengine-host>/v1/jobs/j-7q2c9xk4/tasks/017/metrics
+```
+
+```json
+{
+  "cpu_mem": {
+    "interval_s": 30,
+    "columns": ["t", "cpu_cores", "mem_gib"],
+    "rows": [[0, 3.61, 2.1], [30, 3.58, 4.7], [60, 3.70, 7.3]]
+  },
+  "gpu": {
+    "interval_s": 5,
+    "gpu_count": 1,
+    "columns": ["t", "gpu_util_pct", "gpu_mem_gib", "power_w", "power_pct_tdp"],
+    "rows": [[240, 91.2, 17.8, 61.0, 84.7], [245, 89.6, 17.8, 60.2, 83.6]]
+  }
+}
+```
+
+Load it into a notebook, your monitoring stack or a dashboard to track trends across versions. A new worker version that suddenly needs twice the memory is worth catching before it reaches production.

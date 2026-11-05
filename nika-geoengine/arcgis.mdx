@@ -1,6 +1,6 @@
 ---
 title: 'Use with ArcGIS Pro'
-description: 'Integrate NikaGeoEngine and NikaPlanet services directly inside ArcGIS Pro'
+description: 'Integrate NIKA GeoEngine CLI and NikaPlanet services directly inside ArcGIS Pro'
 icon: "plug"
 ---
 
@@ -8,14 +8,14 @@ icon: "plug"
 
 Our ArcGIS integration focuses on bridging the power of scalable cloud compute and isolated environments directly into the familiar interface of ArcGIS Pro. We provide powerful integrations for both developers building custom geospatial tooling and non-technical stakeholders looking to consume cloud infrastructure smoothly.
 
-## 1. NikaGeoEngine Plugin (For Analysts & Developers)
+## 1. NIKA GeoEngine CLI Plugin (For Analysts & Developers)
 
 The **GeoEngine Plugin for ArcGIS Pro** removes all barriers to getting your custom Python and R scripts running securely inside ArcGIS. Using Docker-based isolation, your scripts execute in clean, scalable container environments directly inside your desktop toolboxes.
 
 ### How it Works
 Traditional ArcGIS Python toolsets require complex parameter handling, custom wrapper coding, and constant dependency conflicts with ArcGIS's internal Python interpreter (e.g. `arcpy` version lock-ins). 
 
-With NikaGeoEngine, your script's environment lives entirely separate:
+With NIKA GeoEngine CLI, your script's environment lives entirely separate:
 - **No Wrapper Code**: GeoEngine dynamically reads your `geoengine.yaml` worker declaration and translates it to ArcGIS Pro Toolbox interfaces on the fly. No proxy services required.
 - **Isolated Execution**: Since the code runs via the GeoEngine CLI as a subprocess (inside a Docker container), it never conflicts with the host `arcpy` ecosystem. ArcGIS Pro stamps local worker runs with `--actor "ArcGIS Pro"`, so CLI run history shows where each execution came from. You can run deep learning workloads with different PyTorch builds effortlessly.
 - **Version Control**: Access all historical, immutable versions of your algorithm directly from the toolbox dropdown in ArcGIS.
@@ -56,6 +56,6 @@ The Sessions tab shows all past and active jobs. Filter by worker or date range 
 ![Job history tab with filter controls and past job cards](/nika-geoengine/arcgis-job-history.png)
 
 ### Expanding Desktop Capabilities
-- **Manage Resource Deployment**: Start, monitor, and deploy configured NikaGeoEngine Workers and algorithms seamlessly from the ArcGIS interface directly to Nika's cloud without managing CI/CD pipelines.
+- **Manage Resource Deployment**: Start, monitor, and deploy configured NIKA GeoEngine CLI Workers and algorithms seamlessly from the ArcGIS interface directly to Nika's cloud without managing CI/CD pipelines.
 - **Execute Cloud Jobs**: Run heavy processing on deployed algorithms, letting NikaPlanet handle the compute provisioning and sending the outputs securely back to your ArcGIS session.
 - **Shared Ecosystems**: Consume shared team assets, vector maps, and algorithms stored globally on NikaHub.

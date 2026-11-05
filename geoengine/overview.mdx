@@ -1,0 +1,146 @@
+---
+title: "NIKA GeoEngine for Kubernetes"
+sidebarTitle: "Overview"
+mode: "wide"
+description: "Run Python and R geoprocessing workers on your own Kubernetes cluster with GPU and high-memory pools, batch fan-out, role-based access and run metrics."
+---
+
+NIKA GeoEngine, previously called NIKA Worker, is geoprocessing orchestration for your own Kubernetes cluster. Bring Python or R workers; NIKA GeoEngine runs them on the right machine, fans big jobs out in parallel, keeps sensitive analyses to cleared roles and measures every run.
+
+<Note>
+  **Two complementary products, one worker format.** [GeoEngine CLI](/nika-geoengine/overview) builds and tests workers on a laptop. NIKA GeoEngine runs the same workers at scale in your Kubernetes cluster.
+</Note>
+
+## Why geoprocessing breaks ordinary clusters
+
+<CardGroup cols={2}>
+  <Card title="Rasters outgrow fixed servers">
+    <img className="block dark:hidden" src="/images/geoengine/problem-memory-light.svg" alt="A 96 GB raster overflows a 64 GB server but fits a 128 GB high-memory worker" width="300" height="176" loading="lazy" style={{ width: "100%", height: "auto" }} />
+    <img className="hidden dark:block" src="/images/geoengine/problem-memory-dark.svg" alt="" width="300" height="176" loading="lazy" style={{ width: "100%", height: "auto" }} />
+    Size each worker to the job. No 64 GB ceiling.
+  </Card>
+  <Card title="Hundreds of scenes, one at a time">
+    <img className="block dark:hidden" src="/images/geoengine/problem-fanout-light.svg" alt="Scenes processed one at a time versus fanned out in parallel" width="300" height="176" loading="lazy" style={{ width: "100%", height: "auto" }} />
+    <img className="hidden dark:block" src="/images/geoengine/problem-fanout-dark.svg" alt="" width="300" height="176" loading="lazy" style={{ width: "100%", height: "auto" }} />
+    One batch job fans out to parallel pods: 200 × 15 min becomes ~75 min on 40 pods.
+  </Card>
+  <Card title="GDAL, CUDA and Python packages keep clashing">
+    <img className="block dark:hidden" src="/images/geoengine/problem-stack-light.svg" alt="Conflicting GDAL, CUDA and Python package versions snapping into one managed runtime" width="300" height="176" loading="lazy" style={{ width: "100%", height: "auto" }} />
+    <img className="hidden dark:block" src="/images/geoengine/problem-stack-dark.svg" alt="" width="300" height="176" loading="lazy" style={{ width: "100%", height: "auto" }} />
+    PyTorch, rasterio, numpy and GDAL pin each other's versions. One managed geo runtime under every worker, with your extra packages resolved against it.
+  </Card>
+  <Card title="Not everyone should run everything">
+    <img className="block dark:hidden" src="/images/geoengine/problem-gate-light.svg" alt="Cleared analysts pass the gate to a sensitive worker; everyone else is blocked" width="300" height="176" loading="lazy" style={{ width: "100%", height: "auto" }} />
+    <img className="hidden dark:block" src="/images/geoengine/problem-gate-dark.svg" alt="" width="300" height="176" loading="lazy" style={{ width: "100%", height: "auto" }} />
+    Restricted workers run only for roles you clear.
+  </Card>
+</CardGroup>
+
+**NIKA GeoEngine takes on all four, so your engineers write processing code, not plumbing.**
+
+## Architecture at a glance
+
+A **control plane** decides who may run what, where and when. An **execution plane** of pods does the work. Both run in your cluster, against storage you own.
+
+<Frame caption="Solid arrows carry requests and work. Dashed arrows carry roles, versions, metrics and scaling signals. Boxes are functional roles, not an inventory of pods.">
+  <img className="ge-v ge-wide ge-light" src="/images/geoengine/architecture-light.svg" alt="NIKA GeoEngine architecture: clients call the gateway; access control checks roles against preset, custom and restricted workers; the orchestrator places tasks on CPU, high-memory and GPU pools that share storage" width="1000" height="620" loading="lazy" style={{ width: "100%", height: "auto" }} />
+  <img className="ge-v ge-wide ge-dark" src="/images/geoengine/architecture-dark.svg" alt="" width="1000" height="620" loading="lazy" style={{ width: "100%", height: "auto" }} />
+  <img className="ge-v ge-tall ge-light" src="/images/geoengine/architecture-tall-light.svg" alt="" width="460" height="1262" loading="lazy" style={{ width: "100%", height: "auto" }} />
+  <img className="ge-v ge-tall ge-dark" src="/images/geoengine/architecture-tall-dark.svg" alt="" width="460" height="1262" loading="lazy" style={{ width: "100%", height: "auto" }} />
+</Frame>
+
+| Component | Job |
+|---|---|
+| **Gateway** | Single entry point. Authenticates every caller. |
+| **Access control** | Checks the caller's roles against the worker before anything is scheduled. |
+| **Orchestrator** | Queues jobs, fans batches out into tasks, places each task on its pool, tracks state. |
+| **Worker catalogue** | Every published worker version: preset, your own, and restricted. |
+| **Observability** | Runtime and CPU, GPU and RAM use for every run. |
+| **Pools and storage** | Your CPU, high-memory and GPU nodes, and the storage every task reads and writes. |
+
+## Three kinds of worker, one gate
+
+Every worker is **preset** (ready-made by NIKA), **your own** Python or R, or **restricted**: a sensitive analysis that only the roles you clear can run.
+
+<Frame>
+  <img className="ge-v ge-wide ge-light" src="/images/geoengine/access-light.svg" alt="Cleared analysts can run every worker; all other users can run the open workers and are blocked from restricted ones" width="950" height="276" loading="lazy" style={{ width: "100%", height: "auto" }} />
+  <img className="ge-v ge-wide ge-dark" src="/images/geoengine/access-dark.svg" alt="" width="950" height="276" loading="lazy" style={{ width: "100%", height: "auto" }} />
+  <img className="ge-v ge-tall ge-light" src="/images/geoengine/access-tall-light.svg" alt="" width="460" height="382" loading="lazy" style={{ width: "100%", height: "auto" }} />
+  <img className="ge-v ge-tall ge-dark" src="/images/geoengine/access-tall-dark.svg" alt="" width="460" height="382" loading="lazy" style={{ width: "100%", height: "auto" }} />
+</Frame>
+
+## What you get
+
+<CardGroup cols={4}>
+  <Card title="Fan-out and autoscaling" icon="share-nodes">One request, many parallel tasks. Nodes follow the queue.</Card>
+  <Card title="No memory ceiling" icon="memory">CPU, high-memory or GPU, sized per worker.</Card>
+  <Card title="GPU-ready, no setup" icon="microchip">CUDA and GDAL managed for you.</Card>
+  <Card title="Role-based access" icon="shield-halved">Sensitive workers stay with cleared roles.</Card>
+  <Card title="Every run measured" icon="chart-line">Runtime, CPU, GPU and RAM. Right-size from evidence.</Card>
+  <Card title="Plugs into your stack" icon="plug">Argo, Kubeflow, FME Flow, imagery servers, any HTTPS client.</Card>
+  <Card title="AI-ready" icon="wand-magic-sparkles">Workers are plain Python or R, which AI assistants write well.</Card>
+  <Card title="Months saved" icon="clock">Skip building and maintaining a geo platform on Kubernetes.</Card>
+</CardGroup>
+
+## Concepts
+
+| Term | Meaning |
+|---|---|
+| **Worker** | One versioned, containerised processing unit, such as conversion, cloud removal or your own script. It declares typed inputs and outputs. |
+| **Worker version** | A semantic version such as `1.2.0`. Immutable once published. Jobs name the exact version, so results stay reproducible. |
+| **Job** | One request to run a worker version on some inputs, with an ID, an owner, a status and a resource record. |
+| **Batch job and task** | A batch job covers many items, such as 200 scenes, and fans out into tasks: one pod per item. |
+| **Machine class** | CPU, high-memory or GPU. Each class maps to a node pool in your cluster. |
+| **Restricted worker** | A worker that only granted roles may run. Every other worker is open. |
+| **Geo runtime** | The managed base under every worker: GDAL, PROJ, CUDA and the core geospatial libraries. |
+| **Shared storage** | The volume or object store you own, where inputs are read and results are written. |
+
+## The life of a job
+
+<Frame>
+  <img className="ge-v ge-wide ge-light" src="/images/geoengine/job-lifecycle-light.svg" alt="Seven steps in the life of a job: submit, authorise, accept and fan out, place, run, write results, record" width="950" height="310" loading="lazy" style={{ width: "100%", height: "auto" }} />
+  <img className="ge-v ge-wide ge-dark" src="/images/geoengine/job-lifecycle-dark.svg" alt="" width="950" height="310" loading="lazy" style={{ width: "100%", height: "auto" }} />
+  <img className="ge-v ge-tall ge-light" src="/images/geoengine/job-lifecycle-tall-light.svg" alt="" width="460" height="542" loading="lazy" style={{ width: "100%", height: "auto" }} />
+  <img className="ge-v ge-tall ge-dark" src="/images/geoengine/job-lifecycle-tall-dark.svg" alt="" width="460" height="542" loading="lazy" style={{ width: "100%", height: "auto" }} />
+</Frame>
+
+- **Access is checked before capacity is spent.** A denied request never creates a pod.
+- **Tasks are independent.** One failed scene does not stop the others, and results are written per task.
+- **Capacity is elastic but bounded** by the limits you set on each pool.
+
+## Where it fits in your stack
+
+Pipeline tools decide *what runs after what*. NIKA GeoEngine runs each heavy step on the right machine, for the right people, and writes results that maps and imagery servers read directly.
+
+<Frame>
+  <img className="ge-v ge-wide ge-light" src="/images/geoengine/stack-fit-light.svg" alt="Map apps, Argo, Kubeflow and FME Flow submit work to NIKA GeoEngine; it writes results to storage that imagery servers and maps read; everything runs on Kubernetes" width="760" height="476" loading="lazy" style={{ width: "100%", height: "auto" }} />
+  <img className="ge-v ge-wide ge-dark" src="/images/geoengine/stack-fit-dark.svg" alt="" width="760" height="476" loading="lazy" style={{ width: "100%", height: "auto" }} />
+  <img className="ge-v ge-tall ge-light" src="/images/geoengine/stack-fit-tall-light.svg" alt="" width="460" height="570" loading="lazy" style={{ width: "100%", height: "auto" }} />
+  <img className="ge-v ge-tall ge-dark" src="/images/geoengine/stack-fit-tall-dark.svg" alt="" width="460" height="570" loading="lazy" style={{ width: "100%", height: "auto" }} />
+</Frame>
+
+## Is it right for you?
+
+<Columns cols={2}>
+  <Card title="A good fit" icon="check">
+    - Raster pipelines and imagery analysis
+    - Jobs that need GPUs or more memory than general nodes have
+    - Many scenes, same logic
+    - Data that must stay in your cluster, with some analyses limited to certain roles
+  </Card>
+  <Card title="Probably not" icon="xmark">
+    - One small script that runs fine on a laptop
+    - General ETL or ML-lifecycle needs with no geoprocessing
+    - No Kubernetes cluster to run it on
+  </Card>
+</Columns>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Deploy and operate" icon="rocket" href="/geoengine/deploy">Licence, prepare the cluster, install, verify, scale.</Card>
+  <Card title="Workers and jobs" icon="cube" href="/geoengine/workers">Build workers, run batches, restrict access.</Card>
+  <Card title="Observability" icon="chart-line" href="/geoengine/observability">See what each run used, then right-size it.</Card>
+  <Card title="Integrations" icon="plug" href="/geoengine/integrations">Argo, Kubeflow, FME Flow, ArcGIS Image Server.</Card>
+  <Card title="Build fullstack map processing with OnlyMapJS" icon="map" href="/geoengine/onlymap-fullstack">A map front end on a geoprocessing backend.</Card>
+</CardGroup>

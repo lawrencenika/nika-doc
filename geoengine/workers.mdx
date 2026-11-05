@@ -1,0 +1,137 @@
+---
+title: "Build Geoprocessing Workers and Batch Jobs on Kubernetes"
+sidebarTitle: "Workers and jobs"
+description: "Write a Python or R worker with a short manifest, run single and batch jobs that fan out across pods, and restrict sensitive workers to cleared roles."
+---
+
+A worker is your processing code plus a short manifest. NIKA GeoEngine handles the environment, hardware and scaling.
+
+<Columns cols={2}>
+  <Card title="You write" icon="pen">
+    - A Python or R script with command-line arguments
+    - A manifest: name, version, typed inputs
+    - Any extra packages it needs
+    - Local tests, run with GeoEngine CLI
+  </Card>
+  <Card title="NIKA GeoEngine handles" icon="gears">
+    - GDAL, PROJ, CUDA and core geo libraries
+    - Mounting inputs and collecting outputs
+    - Placement, scaling, access and metrics
+  </Card>
+</Columns>
+
+Start from a **preset worker** (conversion, cloud removal, resampling) with no code, or package your own.
+
+## The worker manifest
+
+Workers are built with [GeoEngine CLI](/nika-geoengine/overview), the companion command-line tool, in its `geoengine.yaml` format. A worker you build and test on a laptop runs unchanged in the cluster.
+
+```yaml geoengine.yaml
+name: land-cover-classify
+version: "2.0.0"              # MAJOR.MINOR.PATCH, immutable once published
+description: Classify land cover from a multispectral scene
+command:
+  program: python
+  script: classify.py
+  inputs:
+    - name: scene
+      type: file
+      required: true
+      filetypes: [".tif", ".tiff"]
+      description: Input scene
+    - name: model
+      type: enum
+      enum_values: ["unet", "resnet50"]
+      default: "unet"
+      required: false
+    - name: output-dir
+      type: folder
+      output: true              # writable; everything else is read-only
+      required: true
+```
+
+### Input types
+
+| Type | Your script receives |
+|---|---|
+| `file` | `--scene /inputs/scene/<filename>`, mounted read-only |
+| `folder` | `--name /mnt/input_<name>`, read-only unless `output: true` |
+| `string`, `number`, `boolean`, `datetime`, `enum` | `--name value` |
+
+Every input becomes a `--name value` argument, so the script is an ordinary command-line program you can run anywhere.
+
+### Dependencies
+
+The geo runtime already includes GDAL with `osgeo`, fiona, shapely, pyproj, geopandas, numpy, scipy, pandas, xarray and zarr for Python, and sf, terra and stars for R. List anything else, from conda-forge or PyPI, in the worker's `pixi.toml`. For GPU work choose the CUDA runtime when you create the worker; never add CUDA packages yourself.
+
+### Machine class
+
+| If the worker… | Use |
+|---|---|
+| Converts, reprojects or tiles | **CPU** |
+| Mosaics large scenes or holds a data cube in memory | **High-memory** |
+| Runs a model or CUDA code | **GPU** |
+
+Start small and move up on evidence from [real runs](/geoengine/observability).
+
+### Versions and publishing
+
+**Patch** for fixes, **minor** for a new optional input, **major** for removed or renamed inputs or changed outputs. Build and test locally with GeoEngine CLI, then push the version to your cluster's worker catalogue.
+
+
+## Run a job
+
+A job names a worker, an exact version, a machine class and the inputs, and returns an ID at once. It moves `queued` → `running` → `completed` or `failed`.
+
+A task **completes** when the script exits 0 and **fails** on any other exit code, with its log kept. A stopped task is sent `SIGTERM`, and its metrics are saved before it exits. Worker containers run as a non-root user.
+
+## Batch jobs
+
+One request covers many items. The orchestrator fans it out into parallel tasks, the pool scales to fit, and you track one job.
+
+<Frame>
+  <img className="ge-v ge-wide ge-light" src="/images/geoengine/batch-fanout-light.svg" alt="A batch job fans out into parallel tasks that each write one result to shared storage" width="900" height="300" loading="lazy" style={{ width: "100%", height: "auto" }} />
+  <img className="ge-v ge-wide ge-dark" src="/images/geoengine/batch-fanout-dark.svg" alt="" width="900" height="300" loading="lazy" style={{ width: "100%", height: "auto" }} />
+  <img className="ge-v ge-tall ge-light" src="/images/geoengine/batch-fanout-tall-light.svg" alt="" width="460" height="516" loading="lazy" style={{ width: "100%", height: "auto" }} />
+  <img className="ge-v ge-tall ge-dark" src="/images/geoengine/batch-fanout-tall-dark.svg" alt="" width="460" height="516" loading="lazy" style={{ width: "100%", height: "auto" }} />
+</Frame>
+
+| Situation | Use |
+|---|---|
+| One input, one result | A single job |
+| Same processing over many inputs | **A batch job** |
+| Different steps in sequence | Your pipeline tool, one job per step |
+
+### Four habits for fan-out
+
+<Steps>
+  <Step title="One item in, one result out">A worker that loops over a folder cannot be parallelised.</Step>
+  <Step title="Unique output paths">Name results after the input (`scene_001_ndvi.tif`). Overwriting one fixed name is the most common fan-out bug.</Step>
+  <Step title="Safe to rerun">Overwrite or skip existing outputs, never append.</Step>
+  <Step title="Tasks sized for one machine">Tile big mosaics. Many small tasks schedule and recover better.</Step>
+</Steps>
+
+The machine class applies per task: size it for the **largest single item**, then let fan-out supply throughput. If a pool allows 40 concurrent tasks, a 200-scene batch runs in about five waves. Resubmit only failed items.
+
+## Control who can run what
+
+| Layer | Question | Managed with |
+|---|---|---|
+| **Platform administration** | Who installs, upgrades and sees pods and nodes? | Kubernetes RBAC |
+| **Worker execution** | Who may run each worker? | Roles in NIKA GeoEngine |
+
+Workers are **open** by default. Mark one **restricted** and only roles you grant can run it. Others are refused at the gateway, before any pod exists.
+
+| | Conversion | Cloud removal | Resampling | Your Python or R | Sensitive analysis (restricted) |
+|---|---|---|---|---|---|
+| **Cleared analysts** | Run | Run | Run | Run | ✅ Run |
+| **All other users** | Run | Run | Run | Run | ⛔ Blocked |
+
+<Info>Role-based access to workers is part of the **full licence**.</Info>
+
+- **Restrict by data sensitivity, not by team,** and name roles after the capability (`sensitive-analysis`, not `team-b`).
+- **Grant service accounts like people.** A pipeline that runs a restricted worker needs the role too.
+- **Review grants on a schedule,** like any privileged group.
+
+**Data stays in your cluster.** Workers read and write the storage you provide; results are not copied elsewhere to run a job.
+

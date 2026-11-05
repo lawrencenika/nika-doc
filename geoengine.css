@@ -1,0 +1,42 @@
+/* NIKA GeoEngine docs: small page-level rules (under 2 KB in total).
+   1. "Previously called NIKA Worker" chip beside the title of /geoengine/overview only.
+   The same wording is in the page body, so nothing is lost if Mintlify's header markup changes. */
+#content-area:has([data-page-href="/geoengine/overview"]) #page-title::after {
+  content: "Previously called NIKA Worker";
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 14px;
+  padding: 3px 12px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  white-space: nowrap;
+  opacity: 0.7;
+}
+
+/* 2. Diagrams on the /geoengine pages: landscape on wide screens, stacked on phones, in the
+   light or dark variant. Plain <img> tags, because Mintlify wraps images for zoom and a
+   <picture> source would no longer reach its <img>. Classes: ge-v + ge-wide|ge-tall + ge-light|ge-dark. */
+img.ge-v { display: none; }
+img.ge-v.ge-wide.ge-light { display: block; }
+.dark img.ge-v.ge-wide.ge-light { display: none; }
+.dark img.ge-v.ge-wide.ge-dark { display: block; }
+@media (max-width: 640px) {
+  img.ge-v.ge-wide.ge-light, .dark img.ge-v.ge-wide.ge-dark { display: none; }
+  img.ge-v.ge-tall.ge-light { display: block; max-width: 460px; margin: 0 auto; }
+  .dark img.ge-v.ge-tall.ge-light { display: none; }
+  .dark img.ge-v.ge-tall.ge-dark { display: block; max-width: 460px; margin: 0 auto; }
+}
+
+/* 3. Space reserved for the observability charts, so the page does not jump when they draw. */
+.ge-slot { width: 100%; }
+.ge-slot-run { aspect-ratio: 760 / 452; }
+.ge-slot-hist { aspect-ratio: 760 / 350; }
+.ge-slot-bullet { aspect-ratio: 760 / 262; }
+@media (max-width: 640px) {
+  .ge-slot-run { aspect-ratio: auto; min-height: 450px; }
+  .ge-slot-hist { aspect-ratio: auto; min-height: 360px; }
+  .ge-slot-bullet { aspect-ratio: auto; min-height: 360px; }
+}

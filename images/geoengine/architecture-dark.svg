@@ -1,0 +1,80 @@
+<svg width="1000" height="620" class="dg d1-wide" viewBox="0 0 1000 620" role="img" aria-label="NIKA GeoEngine architecture: clients call the gateway; access control checks roles against preset, custom and restricted workers; the orchestrator places tasks on CPU, high-memory and GPU pools that share storage" xmlns="http://www.w3.org/2000/svg"><style>svg{--panel:#1f1422; --panel2:#271a2b; --line:#3a2b3e; --text:#ece6ee; --muted:#a99fae; --accent:#c5ff5a; --accent-ink:#1b2400; --amber:#eba941; --s1:#3987e5; --crit:#e66767; --good:#7fd17f;--font:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;}.g{fill:color-mix(in srgb,var(--panel2) 55%,transparent);stroke:var(--line);stroke-dasharray:5 4}
+.g.outer{fill:none;stroke:var(--muted);stroke-dasharray:none;stroke-width:1.3}
+.b{fill:var(--panel2);stroke:var(--line);stroke-width:1.2}
+.b.acc{fill:color-mix(in srgb,var(--accent) 22%,var(--panel2));stroke:var(--accent)}
+.b.own2{fill:color-mix(in srgb,var(--s1) 20%,var(--panel2));stroke:var(--s1)}
+.b.store{fill:color-mix(in srgb,var(--amber) 18%,var(--panel2));stroke:var(--amber)}
+.b.wk.restricted{stroke:var(--amber);stroke-width:1.6;stroke-dasharray:5 3}
+.b.wk.own{stroke:var(--accent)}
+.b.wk.preset{stroke:var(--s1)}
+.chip{stroke-width:1.3}
+.chip.preset{fill:color-mix(in srgb,var(--s1) 22%,var(--panel2));stroke:var(--s1)}
+.chip.own{fill:color-mix(in srgb,var(--accent) 18%,var(--panel2));stroke:var(--accent)}
+.chip.restricted{fill:color-mix(in srgb,var(--amber) 20%,var(--panel2));stroke:var(--amber);stroke-dasharray:4 3}
+.pod.preset{fill:var(--s1)}.pod.own{fill:var(--accent)}
+.pod.restricted{fill:color-mix(in srgb,var(--amber) 35%,var(--panel2));stroke:var(--amber);stroke-width:1.5;stroke-dasharray:3 2}
+.lk rect{fill:var(--amber)}.lk path{stroke:var(--amber)}
+.lk.ink rect{fill:var(--amber)}.lk.ink path{stroke:var(--amber)}
+.role.ok{fill:var(--good)}.role.other{fill:var(--muted)}
+.cell.ok{fill:color-mix(in srgb,var(--good) 20%,var(--panel2));stroke:color-mix(in srgb,var(--good) 60%,transparent)}
+.cell.no{fill:color-mix(in srgb,var(--crit) 22%,var(--panel2));stroke:var(--crit)}
+.t{fill:var(--text);font:13px var(--font)} .tb{font-weight:600;font-size:14px} .ts{fill:var(--muted);font-size:12px} .ts2{fill:var(--text);font-size:12.5px}
+.tc{font-size:12px;font-weight:600}
+.tg{fill:var(--muted);font-size:11px;letter-spacing:.1em;font-weight:600}
+.tn{fill:var(--accent-ink);font-weight:700;font-size:14px}
+.tnum{fill:var(--accent);font-weight:700;font-size:13px}
+.amb{fill:var(--amber)}
+.bad{fill:var(--crit);font-weight:600}.good{fill:var(--good);font-weight:600}
+.num{fill:var(--accent)}
+.a{fill:none;stroke:var(--muted);stroke-width:1.6}.a.thick{stroke-width:3;stroke:var(--accent)}
+.a.dash{stroke-dasharray:5 4}.a.mute{opacity:.6}
+.ahead{fill:var(--muted)}.aheadc{fill:var(--accent)}
+.a.flow{stroke-dasharray:7 6;animation:flow 1.1s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-13}}
+.pod.blink{animation:blink 3.2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
+.anim-steps .step rect{animation:stephi 7s infinite;animation-delay:calc(var(--i) * 1s)}
+@keyframes stephi{0%,13%{stroke:var(--accent);stroke-width:2.6}15%,100%{stroke:var(--line);stroke-width:1.2}}
+.anim-tasks .task rect{animation:taskp 2.4s ease-in-out infinite;animation-delay:calc(var(--i) * .35s)}
+@keyframes taskp{0%,100%{fill:var(--panel2)}50%{fill:color-mix(in srgb,var(--s1) 35%,var(--panel2))}}
+.tk{stroke:var(--s1)}
+.req,.xmark{opacity:0}
+.req-ok{animation:reqok 8s infinite}
+.req-no{animation:reqno 8s infinite}
+.xmark path{stroke:var(--crit);stroke-width:3.5;stroke-linecap:round;fill:none}
+.xmark{animation:xm 8s infinite}
+@keyframes reqok{0%{opacity:0;transform:translate(172px,126px)}3%{opacity:1}40%{opacity:1;transform:translate(859px,126px)}46%,100%{opacity:0;transform:translate(859px,126px)}}
+@keyframes reqno{0%,48%{opacity:0;transform:translate(172px,192px)}51%{opacity:1;transform:translate(172px,192px)}80%{opacity:1;transform:translate(772px,192px)}83%,100%{opacity:0;transform:translate(772px,192px)}}
+@keyframes xm{0%,80%{opacity:0;transform:translate(772px,192px) scale(.4)}84%,95%{opacity:1;transform:translate(772px,192px) scale(1)}100%{opacity:0;transform:translate(772px,192px)}}
+.gauge{fill:none;stroke:var(--muted);stroke-width:1.5}.gauge.top{fill:none}
+.fillbar{transform-box:fill-box;transform-origin:bottom;animation:fill 6s ease-in infinite}
+.fillbar.over{animation-name:fillover}
+.fillbar.fit{fill:var(--accent)}
+@keyframes fill{0%{transform:scaleY(0)}55%,100%{transform:scaleY(1)}}
+@keyframes fillover{0%{transform:scaleY(0);fill:var(--s1)}37%{fill:var(--s1)}40%{fill:var(--crit)}55%,100%{transform:scaleY(1);fill:var(--crit)}}
+.pop{opacity:0;animation:pop 6s infinite}
+@keyframes pop{0%,55%{opacity:0}60%,100%{opacity:1}}
+.lane{stroke:var(--line);stroke-width:1.5}
+.dot.serial{fill:var(--muted);animation:serial 7s linear infinite}
+.dot.par{fill:var(--accent);animation:par 1.4s linear infinite;animation-delay:var(--d)}
+@keyframes serial{from{transform:translateX(0)}to{transform:translateX(280px)}}
+@keyframes par{from{transform:translateX(0)}to{transform:translateX(280px)}}
+.blk{transform-box:fill-box;transform-origin:center;animation:snap 6s ease-out infinite}
+.blk .sblk{animation:snapc 6s infinite}
+.blk:nth-of-type(1){--ox:-26px;--r:-5deg}.blk:nth-of-type(2){--ox:22px;--r:4deg}.blk:nth-of-type(3){--ox:-14px;--r:-3deg}.blk:nth-of-type(4){--ox:30px;--r:6deg}.blk:nth-of-type(5){--ox:-20px;--r:-4deg}
+.clash{animation:clash 6s infinite}
+@keyframes clash{0%,35%{opacity:1}42%,100%{opacity:0}}
+@keyframes snap{0%,35%{transform:translateX(var(--ox)) rotate(var(--r))}50%,100%{transform:none}}
+@keyframes snapc{0%,35%{stroke:var(--crit)}50%,100%{stroke:var(--accent)}}
+.gate{stroke:var(--amber);stroke-width:3;stroke-dasharray:6 4}
+.tok{opacity:0}
+.tok-ok{animation:tokok 7s infinite}.tok-no{animation:tokno 7s infinite}
+@keyframes tokok{0%{opacity:0;transform:translate(20px,85px)}4%{opacity:1}42%{opacity:1;transform:translate(262px,85px)}48%,100%{opacity:0;transform:translate(262px,85px)}}
+@keyframes tokno{0%,50%{opacity:0;transform:translate(20px,110px)}53%{opacity:1;transform:translate(20px,110px)}76%{opacity:1;transform:translate(166px,110px)}79%,100%{opacity:0;transform:translate(166px,110px)}}
+.xmark2{opacity:0;animation:xm2 7s infinite}.xmark2 path{stroke:var(--crit);stroke-width:3.5;stroke-linecap:round;fill:none}
+@keyframes xm2{0%,76%{opacity:0}79%,95%{opacity:1}100%{opacity:0}}
+@media (prefers-reduced-motion:reduce){
+  *,*:before,*:after{animation:none!important}
+  .pop,.xmark2{opacity:1}.req,.tok,.xmark,.clash{opacity:0}
+}
+</style><defs><marker id="m1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="9" markerHeight="9" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="ahead"/></marker><marker id="m1c" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" markerUnits="userSpaceOnUse" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" class="aheadc"/></marker></defs><rect x="0.5" y="0.5" width="999" height="619" rx="14" style="fill:var(--panel);stroke:var(--line)"/><rect x="10" y="10" width="210" height="600" rx="14" class="g"/><text x="24" y="32" class="t tg" text-anchor="start">WHO SUBMITS WORK</text><rect x="26" y="58" width="178" height="62" rx="10" class="b"/><text x="115.0" y="86.0" class="t tb" text-anchor="middle">Apps and maps</text><text x="115.0" y="104.0" class="t ts" text-anchor="middle">OnlyMap · API · CLI</text><rect x="26" y="140" width="178" height="62" rx="10" class="b"/><text x="115.0" y="168.0" class="t tb" text-anchor="middle">Pipeline tools</text><text x="115.0" y="186.0" class="t ts" text-anchor="middle">Argo · Kubeflow · FME Flow</text><rect x="26" y="222" width="178" height="62" rx="10" class="b"/><text x="115.0" y="250.0" class="t tb" text-anchor="middle">Scripts and services</text><text x="115.0" y="268.0" class="t ts" text-anchor="middle">scheduled or on demand</text><text x="26" y="330" class="t tg" text-anchor="start">PEOPLE AND ROLES</text><circle cx="40" cy="356" r="7" class="role ok"/><text x="54" y="361" class="t ts2" text-anchor="start">Cleared analysts</text><circle cx="40" cy="384" r="7" class="role other"/><text x="54" y="389" class="t ts2" text-anchor="start">All other users</text><text x="26" y="420" class="t ts" text-anchor="start">Every request carries the</text><text x="26" y="437" class="t ts" text-anchor="start">caller&#x27;s roles.</text><path d="M204 89 L232 89" class="a"/><path d="M204 171 L232 171" class="a"/><path d="M204 253 L232 253" class="a"/><path d="M232 89 L232 253" class="a"/><path d="M232 108 L290 108" class="a flow" marker-end="url(#m1)"/><path d="M150 370 L232 370 L232 174 L290 174" class="a mute dash"/><rect x="244" y="10" width="746" height="600" rx="14" class="g outer"/><text x="258" y="32" class="t tg" text-anchor="start">YOUR KUBERNETES CLUSTER</text><rect x="262" y="46" width="302" height="470" rx="14" class="g"/><text x="276" y="68" class="t tg" text-anchor="start">CONTROL PLANE</text><rect x="290" y="82" width="246" height="52" rx="10" class="b"/><text x="413.0" y="105.0" class="t tb" text-anchor="middle">Gateway</text><text x="413.0" y="123.0" class="t ts" text-anchor="middle">authenticates every request</text><rect x="290" y="150" width="246" height="52" rx="10" class="b"/><text x="413.0" y="173.0" class="t tb" text-anchor="middle">Access control</text><text x="413.0" y="191.0" class="t ts" text-anchor="middle">caller&#x27;s roles vs the worker</text><rect x="290" y="218" width="246" height="56" rx="10" class="b acc"/><text x="413.0" y="243.0" class="t tb" text-anchor="middle">Orchestrator</text><text x="413.0" y="261.0" class="t ts" text-anchor="middle">queue · fan-out · placement</text><path d="M413 134 L413 150" class="a" marker-end="url(#m1)"/><path d="M413 202 L413 218" class="a" marker-end="url(#m1)"/><rect x="276" y="292" width="274" height="146" rx="12" class="b"/><text x="290" y="314" class="t tb" text-anchor="start">Worker catalogue</text><text x="536" y="314" class="t ts" text-anchor="end">versioned</text><rect x="290" y="326" width="112" height="26" rx="13" class="chip preset"/><text x="346.0" y="343.5" class="t tc" text-anchor="middle">Conversion</text><rect x="410" y="326" width="126" height="26" rx="13" class="chip preset"/><text x="473.0" y="343.5" class="t tc" text-anchor="middle">Cloud removal</text><rect x="290" y="360" width="112" height="26" rx="13" class="chip preset"/><text x="346.0" y="377.5" class="t tc" text-anchor="middle">Resampling</text><rect x="410" y="360" width="126" height="26" rx="13" class="chip own"/><text x="473.0" y="377.5" class="t tc" text-anchor="middle">Your Python / R</text><rect x="290" y="396" width="246" height="26" rx="13" class="chip restricted"/><g class="lk" transform="translate(300 402) scale(0.95)"><path d="M3 6V4a3 3 0 0 1 6 0v2" fill="none" stroke-width="1.6"/><rect x="1" y="6" width="10" height="8" rx="2"/></g><text x="421.0" y="413.5" class="t tc" text-anchor="middle">Sensitive analysis · restricted</text><path d="M413 292 L413 274" class="a dash" marker-end="url(#m1)"/><rect x="276" y="452" width="274" height="50" rx="10" class="b"/><text x="413.0" y="474.0" class="t tb" text-anchor="middle">Observability</text><text x="413.0" y="492.0" class="t ts" text-anchor="middle">runtime · CPU · GPU · RAM per run</text><rect x="590" y="46" width="382" height="470" rx="14" class="g"/><text x="604" y="68" class="t tg" text-anchor="start">EXECUTION PLANE · ONE POD PER TASK</text><rect x="608" y="80" width="346" height="108" rx="10" class="b"/><text x="624" y="104" class="t tb" text-anchor="start">CPU pool</text><text x="624" y="122" class="t ts" text-anchor="start">everyday processing</text><rect x="624" y="142" width="22" height="22" rx="4" class="pod preset"/><rect x="654" y="142" width="22" height="22" rx="4" class="pod preset"/><rect x="684" y="142" width="22" height="22" rx="4" class="pod preset"/><rect x="714" y="142" width="22" height="22" rx="4" class="pod preset"/><rect x="744" y="142" width="22" height="22" rx="4" class="pod preset"/><rect x="774" y="142" width="22" height="22" rx="4" class="pod own"/><rect x="804" y="142" width="22" height="22" rx="4" class="pod own"/><rect x="834" y="142" width="22" height="22" rx="4" class="pod own"/><rect x="864" y="142" width="22" height="22" rx="4" class="pod preset"/><rect x="894" y="142" width="22" height="22" rx="4" class="pod preset blink"/><rect x="608" y="204" width="346" height="108" rx="10" class="b"/><text x="624" y="228" class="t tb" text-anchor="start">High-memory pool</text><text x="624" y="246" class="t ts" text-anchor="start">sized to the largest raster</text><rect x="624" y="266" width="22" height="22" rx="4" class="pod preset"/><rect x="654" y="266" width="22" height="22" rx="4" class="pod own"/><rect x="684" y="266" width="22" height="22" rx="4" class="pod own"/><rect x="714" y="266" width="22" height="22" rx="4" class="pod restricted"/><g class="lk ink" transform="translate(718 269) scale(0.8)"><path d="M3 6V4a3 3 0 0 1 6 0v2" fill="none" stroke-width="1.6"/><rect x="1" y="6" width="10" height="8" rx="2"/></g><rect x="744" y="266" width="22" height="22" rx="4" class="pod preset"/><rect x="774" y="266" width="22" height="22" rx="4" class="pod own"/><rect x="804" y="266" width="22" height="22" rx="4" class="pod restricted blink"/><g class="lk ink" transform="translate(808 269) scale(0.8)"><path d="M3 6V4a3 3 0 0 1 6 0v2" fill="none" stroke-width="1.6"/><rect x="1" y="6" width="10" height="8" rx="2"/></g><rect x="608" y="328" width="346" height="108" rx="10" class="b"/><text x="624" y="352" class="t tb" text-anchor="start">GPU pool</text><text x="624" y="370" class="t ts" text-anchor="start">CUDA GPUs of several sizes</text><rect x="624" y="390" width="22" height="22" rx="4" class="pod own"/><rect x="654" y="390" width="22" height="22" rx="4" class="pod restricted"/><g class="lk ink" transform="translate(658 393) scale(0.8)"><path d="M3 6V4a3 3 0 0 1 6 0v2" fill="none" stroke-width="1.6"/><rect x="1" y="6" width="10" height="8" rx="2"/></g><rect x="684" y="390" width="22" height="22" rx="4" class="pod restricted"/><g class="lk ink" transform="translate(688 393) scale(0.8)"><path d="M3 6V4a3 3 0 0 1 6 0v2" fill="none" stroke-width="1.6"/><rect x="1" y="6" width="10" height="8" rx="2"/></g><rect x="714" y="390" width="22" height="22" rx="4" class="pod own"/><rect x="744" y="390" width="22" height="22" rx="4" class="pod own blink"/><rect x="624" y="458" width="14" height="14" rx="3" class="pod preset"/><text x="644" y="470" class="t ts" text-anchor="start">preset worker</text><rect x="742" y="458" width="14" height="14" rx="3" class="pod own"/><text x="762" y="470" class="t ts" text-anchor="start">your code</text><rect x="842" y="458" width="14" height="14" rx="3" class="pod restricted"/><text x="862" y="470" class="t ts" text-anchor="start">restricted</text><text x="624" y="496" class="t ts" text-anchor="start">Restricted tasks: cleared callers only, in their own pods.</text><path d="M536 246 L590 246" class="a thick flow" marker-end="url(#m1c)"/><path d="M590 478 L550 478" class="a dash" marker-end="url(#m1)"/><rect x="262" y="540" width="302" height="56" rx="10" class="b"/><text x="413.0" y="565.0" class="t tb" text-anchor="middle">Cluster autoscaler</text><text x="413.0" y="583.0" class="t ts" text-anchor="middle">adds nodes within each pool&#x27;s limit</text><rect x="590" y="540" width="382" height="56" rx="10" class="b store"/><text x="781.0" y="565.0" class="t tb" text-anchor="middle">Shared storage</text><text x="781.0" y="583.0" class="t ts" text-anchor="middle">inputs in · one result per task out</text><path d="M564 568 L577 568 L577 500 L590 500" class="a dash" marker-end="url(#m1)"/><path d="M781 516 L781 540" class="a" marker-end="url(#m1)"/></svg>

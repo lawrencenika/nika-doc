@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OnlyMap on GeoEngine demo</title>
+<link rel="stylesheet" href="https://unpkg.com/@nika-js/onlymap@0.12.1/dist/onlymapjs.css">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#170d19;--panel:rgba(31,20,34,.94);--line:#3a2b3e;--text:#ece6ee;--muted:#a99fae;--accent:#c5ff5a;--ink:#1b2400;--amber:#eba941;--bad:#e66767;--mono:"JetBrains Mono",ui-monospace,Menlo,monospace}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font:14px/1.45 "Space Grotesk",system-ui,sans-serif}
+.stage{position:relative;height:100%;min-height:520px}
+om-map{display:block;position:absolute;inset:0}
+.panel{position:absolute;top:12px;left:12px;width:300px;max-width:calc(100% - 24px);background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px;z-index:5;backdrop-filter:blur(6px)}
+.panel h3{margin:0 0 2px;font-size:15px}
+.panel .sub{color:var(--muted);font-size:12px;margin-bottom:10px}
+label{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:10px 0 4px;font-weight:600}
+select,button{width:100%;font:inherit;border-radius:9px;border:1px solid var(--line);background:#271a2b;color:var(--text);padding:7px 9px}
+button.run{margin-top:12px;background:var(--accent);color:var(--ink);border:none;font-weight:700;cursor:pointer;padding:9px}
+button.run:disabled{opacity:.55;cursor:default}
+.meta{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:12.5px;margin-top:12px}
+.meta span{color:var(--muted)}
+.meta b{font-weight:600;text-align:right;font-family:var(--mono);font-size:12px}
+.pill{display:inline-block;border-radius:999px;padding:0 9px;font:600 11px var(--mono);background:#3a2b3e}
+.pill.running{background:var(--amber);color:#1b1200}.pill.completed{background:var(--accent);color:var(--ink)}.pill.blocked{background:var(--bad);color:#200}
+.bar{height:6px;background:#3a2b3e;border-radius:4px;margin-top:10px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:width .4s}
+.restricted{color:var(--amber);font-size:12px;margin-top:6px;display:none}
+.restricted.on{display:block}
+.log{position:absolute;right:12px;bottom:66px;width:380px;max-width:calc(100% - 24px);max-height:118px;overflow:auto;background:rgba(18,10,20,.92);border:1px solid var(--line);border-radius:12px;padding:8px 10px;font:11.5px/1.5 var(--mono);color:#cfc6d2;z-index:5}
+.log div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.log .m{color:var(--accent)}.log .s{color:var(--muted)}.log .e{color:var(--bad)}
+.legend{position:absolute;right:12px;top:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:12px;z-index:5;min-width:170px}
+.legend .ramp{height:10px;border-radius:3px;margin:6px 0 2px}
+.legend .ends{display:flex;justify-content:space-between;color:var(--muted);font-size:11px}
+.legend .k{display:flex;align-items:center;gap:7px;margin-top:5px;color:var(--muted)}
+.legend .k i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.tip{background:#120a14;color:#ece6ee;border:1px solid #3a2b3e;border-radius:8px;padding:7px 10px;font:12px "Space Grotesk",system-ui,sans-serif;line-height:1.5}
+.tip b{color:#c5ff5a}
+@media (max-width:640px){.log{display:none}.legend{display:none}}
+@media (max-width:560px){
+  .panel{top:8px;left:8px;right:8px;width:auto;max-width:none;padding:10px 12px}
+  .panel h3{font-size:14px}.panel .sub,.opt{display:none}
+  .pick{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  label{margin:4px 0 3px}
+  select{padding:6px 7px;font-size:13px}
+  button.run{margin-top:8px;padding:8px}
+  .meta{grid-template-columns:auto 1fr auto 1fr auto 1fr;gap:2px 6px;margin-top:8px;font-size:11.5px}
+  .bar{margin-top:6px}
+}
+</style>
+</head>
+<body>
+<div class="stage">
+  <om-map id="map" center="[5.36, 52.53]" zoom="9.1" basemap="satellite">
+    <om-fallback><p style="padding:20px">This interactive map needs JavaScript and WebGL.</p></om-fallback>
+    <om-layer id="aoi" type="GeoJsonLayer"
+      filled="false" stroked="true" get-line-color="[197,255,90,230]" line-width-min-pixels="2"
+      dash="[6, 4]" label="Area of interest"></om-layer>
+    <om-layer id="tasks" type="GeoJsonLayer" refresh="1s"
+      filled="true" stroked="true" get-fill-color="$fill" get-line-color="$line" line-width-min-pixels="1"
+      pickable label="Tasks"></om-layer>
+    <om-behavior on="hover" layer="tasks" action="show-tooltip" template="#task-tip"></om-behavior>
+  </om-map>
+
+  <div class="panel">
+    <h3>Run a batch job from the map</h3>
+    <div class="sub">Each square on the map is one task in the batch job.</div>
+    <div class="pick">
+      <div><label for="scn">Scenario</label><select id="scn"></select></div>
+      <div><label for="role">Signed in as</label><select id="role"><option value="analyst">Analyst</option><option value="cleared">Cleared analyst</option></select></div>
+    </div>
+    <div class="restricted" id="rnote">This worker is restricted. Only cleared roles can run it.</div>
+    <button class="run" id="run" type="button">Run batch job</button>
+    <div class="meta" id="meta">
+      <span class="opt">Worker</span><b class="opt" id="m-worker">—</b>
+      <span class="opt">Machine class</span><b class="opt" id="m-class">—</b>
+      <span class="opt">Job</span><b class="opt" id="m-job">—</b>
+      <span>Status</span><b><span class="pill" id="m-status">idle</span></b>
+      <span>Tasks</span><b id="m-tasks">—</b>
+      <span>Pods running</span><b id="m-pods">—</b>
+      <span class="opt">Elapsed</span><b class="opt" id="m-time">—</b>
+    </div>
+    <div class="bar"><i id="m-bar"></i></div>
+  </div>
+
+  <div class="legend" id="legend"></div>
+  <div class="log" id="log" aria-live="polite"></div>
+</div>
+
+<template id="task-tip">
+  <div class="tip"><b>{{task}}</b> · {{state}}<br>{{scene}}<br>{{detail}}</div>
+</template>
+
+<script type="module">
+import { OmMap } from "https://unpkg.com/@nika-js/onlymap@0.12.1";
+
+const HOST = "https://geoengine.demo";
+// Demo time: 1 second on screen stands for 90 seconds of processing.
+const SCALE = 90;
+
+const SCENARIOS = [
+  { id: 0, name: "Cloud-free NDVI · crop monitoring", center: [5.36, 52.53], zoom: 9.1,
+    bbox: [5.30, 52.40, 5.82, 52.64], cols: 8, rows: 5,
+    worker: "cloud-removal-ndvi", version: "2.3.1", cls: "highmem", pool: 12, restricted: false,
+    metric: "mean NDVI", ramp: [[226, 244, 199], [26, 110, 38]], domain: [0.15, 0.85], fmt: v => v.toFixed(2),
+    gen: (cx, cy, r) => 0.35 + 0.4 * r() + 0.1 * Math.sin(cx * 9) },
+  { id: 1, name: "Flood extent from radar · disaster response", center: [105.53, 10.09], zoom: 9.1,
+    bbox: [105.48, 9.94, 105.98, 10.22], cols: 8, rows: 5,
+    worker: "sar-flood-extent", version: "1.4.0", cls: "cpu", pool: 16, restricted: false,
+    metric: "area flooded", ramp: [[222, 235, 247], [8, 69, 148]], domain: [0, 80], fmt: v => v.toFixed(0) + "%",
+    gen: (cx, cy, r) => Math.max(0, Math.min(80, 70 - Math.abs(cy - 10.06) * 600 + 25 * r())) },
+  { id: 2, name: "New-building detection · restricted", center: [3.97, 51.97], zoom: 9.9,
+    bbox: [3.96, 51.90, 4.26, 52.03], cols: 7, rows: 4,
+    worker: "building-change-detect", version: "3.0.2", cls: "gpu", pool: 6, restricted: true,
+    metric: "new buildings", ramp: [[254, 230, 206], [166, 54, 3]], domain: [0, 40], fmt: v => v.toFixed(0),
+    gen: (cx, cy, r) => Math.round(40 * Math.pow(r(), 2)) },
+];
+
+// ---------------------------------------------------------------- simulated API
+let rngSeed = 7;
+const rand = () => ((rngSeed = (rngSeed * 16807) % 2147483647) / 2147483647);
+let job = null;
+const $ = id => document.getElementById(id);
+const log = (cls, msg) => {
+  const d = document.createElement("div"); d.className = cls; d.textContent = msg;
+  $("log").appendChild(d); $("log").scrollTop = 1e9;
+};
+const lerp = (a, b, t) => a.map((v, i) => Math.round(v + (b[i] - v) * t));
+const fmtDur = s => s < 60 ? `${Math.round(s)} s` : `${Math.floor(s / 60)} min ${String(Math.round(s % 60)).padStart(2, "0")} s`;
+
+function grid(s) {
+  const [w, so, e, n] = s.bbox, dx = (e - w) / s.cols, dy = (n - so) / s.rows, cells = [];
+  for (let r = 0; r < s.rows; r++) for (let c = 0; c < s.cols; c++) {
+    const x0 = w + c * dx, y0 = so + r * dy;
+    cells.push({ ring: [[x0, y0], [x0 + dx, y0], [x0 + dx, y0 + dy], [x0, y0 + dy], [x0, y0]], cx: x0 + dx / 2, cy: y0 + dy / 2 });
+  }
+  return cells;
+}
+
+function aoi(s) {
+  const [w, so, e, n] = s.bbox;
+  return { type: "FeatureCollection", features: [{ type: "Feature", properties: {},
+    geometry: { type: "Polygon", coordinates: [[[w, so], [e, so], [e, n], [w, n], [w, so]]] } }] };
+}
+
+function startJob(s) {
+  rngSeed = 11 + s.id * 101;
+  const cells = grid(s);
+  const tasks = cells.map((g, i) => ({
+    i, g, dur: 1.6 + rand() * 3.2, value: s.gen(g.cx, g.cy, rand),
+    mem: s.cls === "highmem" ? 28 + rand() * 14 : s.cls === "gpu" ? 9 + rand() * 5 : 3 + rand() * 3,
+    start: null, end: null,
+  }));
+  const id = "j-" + Math.random().toString(36).slice(2, 8) + Math.random().toString(36).slice(2, 6);
+  job = { id, s, tasks, t0: performance.now(), done: false };
+  return job;
+}
+
+function tick() {
+  if (!job) return;
+  const now = (performance.now() - job.t0) / 1000;
+  let running = 0;
+  for (const t of job.tasks) if (t.start !== null && t.end > now) running++;
+  for (const t of job.tasks) {
+    if (t.start === null && running < job.s.pool && now > 0.6) { t.start = now; t.end = now + t.dur; running++; }
+  }
+}
+
+function snapshot() {
+  tick();
+  const now = (performance.now() - job.t0) / 1000, s = job.s;
+  let done = 0, run = 0;
+  const features = job.tasks.map(t => {
+    let state = "queued", fill = [255, 255, 255, 28], line = [255, 255, 255, 90], detail = "waiting for a free pod";
+    if (t.start !== null && now < t.end) {
+      state = "running"; run++;
+      const pulse = 0.5 + 0.5 * Math.sin(now * 5 + t.i);
+      fill = [235, 169, 65, Math.round(70 + 90 * pulse)]; line = [235, 169, 65, 255];
+      detail = `running ${fmtDur((now - t.start) * SCALE)} · ${s.cls} pool`;
+    } else if (t.start !== null) {
+      state = "completed"; done++;
+      const k = Math.max(0, Math.min(1, (t.value - s.domain[0]) / (s.domain[1] - s.domain[0])));
+      fill = [...lerp(s.ramp[0], s.ramp[1], k), 215]; line = [255, 255, 255, 140];
+      detail = `${s.metric} ${s.fmt(t.value)} · ran ${fmtDur(t.dur * SCALE)} · peak RAM ${t.mem.toFixed(1)} GiB`;
+    }
+    return { type: "Feature", properties: { task: `task ${String(t.i + 1).padStart(3, "0")}`, state, fill, line, detail,
+      scene: `scene ${s.worker.split("-")[0]}_${String(t.i + 1).padStart(3, "0")}.tif` },
+      geometry: { type: "Polygon", coordinates: [t.g.ring] } };
+  });
+  const total = job.tasks.length;
+  if (done === total && !job.done) {
+    job.done = true;
+    log("m", `job ${job.id} completed · ${total} results in shared storage`);
+  }
+  updatePanel(done, run, total, now);
+  return { type: "FeatureCollection", features };
+}
+
+let lastLogged = -1;
+async function fakeFetch(url, init) {
+  const u = String(url);
+  if (!u.startsWith(HOST)) return fetch(url, init);
+  const json = body => new Response(JSON.stringify(body), { status: 200, headers: { "content-type": "application/geo+json" } });
+  let m = u.match(/\/v1\/aoi\/(\d+)\.geojson/);
+  if (m) return json(aoi(SCENARIOS[+m[1]]));
+  m = u.match(/\/v1\/jobs\/([^/]+)\/tasks\.geojson/);
+  if (m && job && m[1] === job.id) {
+    const fc = snapshot();
+    const done = fc.features.filter(f => f.properties.state === "completed").length;
+    if (!job.done && done !== lastLogged) { lastLogged = done; log("s", `GET /v1/jobs/${job.id}/tasks.geojson → 200 · ${done}/${fc.features.length} done`); }
+    return json(fc);
+  }
+  return json({ type: "FeatureCollection", features: [] });
+}
+OmMap.configureData({ fetch: fakeFetch });
+
+// ---------------------------------------------------------------- UI
+const map = $("map"), tasksEl = map.querySelector("#tasks"), aoiEl = map.querySelector("#aoi");
+SCENARIOS.forEach(s => $("scn").insertAdjacentHTML("beforeend", `<option value="${s.id}">${s.name}</option>`));
+
+function current() { return SCENARIOS[+$("scn").value]; }
+function legend(s) {
+  const a = `rgb(${s.ramp[0]})`, b = `rgb(${s.ramp[1]})`;
+  $("legend").innerHTML = `<b>${s.metric[0].toUpperCase() + s.metric.slice(1)}</b> per task
+    <div class="ramp" style="background:linear-gradient(90deg,${a},${b})"></div>
+    <div class="ends"><span>${s.fmt(s.domain[0])}</span><span>${s.fmt(s.domain[1])}</span></div>
+    <div class="k"><i style="background:rgba(235,169,65,.8)"></i>running</div>
+    <div class="k"><i style="background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.5)"></i>queued</div>`;
+}
+function setStatus(st) { const p = $("m-status"); p.textContent = st; p.className = "pill " + st; }
+function updatePanel(done, run, total, now) {
+  $("m-tasks").textContent = `${done} / ${total} done`;
+  $("m-pods").textContent = String(run);
+  $("m-time").textContent = fmtDur(now * SCALE);
+  $("m-bar").style.width = (100 * done / total) + "%";
+  setStatus(done === total ? "completed" : run ? "running" : "queued");
+  if (done === total) $("run").disabled = false;
+}
+function selectScenario() {
+  const s = current();
+  job = null;
+  $("m-worker").textContent = `${s.worker} ${s.version}`;
+  $("m-class").textContent = s.cls;
+  ["m-job", "m-tasks", "m-pods", "m-time"].forEach(k => $(k).textContent = "—");
+  $("m-bar").style.width = "0"; setStatus("idle");
+  $("rnote").classList.toggle("on", s.restricted);
+  $("run").disabled = false;
+  aoiEl.setAttribute("data", `${HOST}/v1/aoi/${s.id}.geojson`);
+  tasksEl.setAttribute("data", `${HOST}/v1/jobs/none-${s.id}/tasks.geojson`);
+  legend(s);
+  // On a phone the panel sits on top, so frame the area of interest lower and a little wider.
+  const narrow = window.innerWidth < 560, [w, so, e, n] = s.bbox;
+  const center = narrow ? [(w + e) / 2, (so + n) / 2 + (n - so) * 0.55] : s.center;
+  Promise.resolve(map.ready).then(() => map.flyTo(center, narrow ? s.zoom - 0.9 : s.zoom));
+}
+$("scn").addEventListener("change", selectScenario);
+
+$("run").addEventListener("click", () => {
+  const s = current(), role = $("role").value;
+  const body = { worker: s.worker, version: s.version, machine_class: s.cls, items: s.cols * s.rows };
+  log("m", `POST /v1/jobs ${JSON.stringify(body)}`);
+  if (s.restricted && role !== "cleared") {
+    log("e", `403 Forbidden · role "analyst" is not granted ${s.worker} · no pod created`);
+    $("m-job").textContent = "—"; setStatus("blocked");
+    return;
+  }
+  const j = startJob(s); lastLogged = -1;
+  log("s", `202 Accepted {"job_id":"${j.id}","status":"queued","tasks":${j.tasks.length}}`);
+  $("m-job").textContent = j.id;
+  $("run").disabled = true;
+  tasksEl.setAttribute("data", `${HOST}/v1/jobs/${j.id}/tasks.geojson`);
+});
+
+selectScenario();
+log("s", "Demo: API responses are simulated in this page.");
+</script>
+</body>
+</html>

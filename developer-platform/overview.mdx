@@ -1,21 +1,25 @@
 ---
 title: "Developer Platform"
-description: "Build frontend geospatial experiences with OnlyMap JS and package, run, and host reproducible processing workers with NIKA GeoEngine."
+description: "Build map front ends with OnlyMap JS, package reproducible workers with NIKA GeoEngine CLI, and run them at scale on Kubernetes with NIKA GeoEngine."
 icon: "code"
 ---
 
 ## Build the NIKA geospatial stack
 
-NIKA's Developer Platform has two complementary tools. **OnlyMap JS** is the frontend layer for building interactive WebGL maps in the browser. **NIKA GeoEngine** is the backend worker platform for packaging, testing, running, and hosting geoprocessing code with reproducible environments.
+NIKA's Developer Platform has three complementary tools. **OnlyMap JS** is the frontend layer for building interactive WebGL maps in the browser. **NIKA GeoEngine CLI** packages, tests, and versions geoprocessing workers with reproducible environments. **NIKA GeoEngine** runs those workers at scale on your own Kubernetes cluster.
 
 <Columns cols={2}>
   <Card title="OnlyMap JS — frontend map applications" icon="map" href="/onlymap/overview">
     Build interactive maps with HTML custom elements and WebGL. Declare layers, widgets, popups, interactions, and stories without setting up deck.gl directly or maintaining a bespoke map UI framework.
   </Card>
-  <Card title="NIKA GeoEngine — backend processing workers" icon="server" href="/nika-geoengine/overview">
+  <Card title="NIKA GeoEngine CLI — build and test workers" icon="terminal" href="/nika-geoengine/overview">
     Package Python or R geoprocessing workloads in isolated containers, test them locally, version them, and make them available in the cloud and through QGIS or ArcGIS Pro.
   </Card>
 </Columns>
+
+<Card title="NIKA GeoEngine — geoprocessing orchestration on Kubernetes" icon="server" href="/geoengine/overview">
+  Deploy into your own cluster to run workers on CPU, high-memory and GPU machines, fan batch jobs out in parallel, restrict sensitive workers to cleared roles, measure every run, and connect Argo Workflows, Kubeflow Pipelines, FME Flow or ArcGIS Image Server.
+</Card>
 
 ## Choose where to start
 
@@ -24,7 +28,10 @@ NIKA's Developer Platform has two complementary tools. **OnlyMap JS** is the fro
     Start with [OnlyMap JS](/onlymap/overview) when your goal is a browser-based map application, a visualisation, or an embeddable map experience.
   </Step>
   <Step title="Package a geoprocessing workflow">
-    Start with [NIKA GeoEngine](/nika-geoengine/overview), then follow [Installation & Setup](/guides/custom-geoprocess-deployment/installation) and [Your First Worker](/guides/custom-geoprocess-deployment/step-by-step).
+    Start with [NIKA GeoEngine CLI](/nika-geoengine/overview), then follow [Installation & Setup](/guides/custom-geoprocess-deployment/installation) and [Your First Worker](/guides/custom-geoprocess-deployment/step-by-step).
+  </Step>
+  <Step title="Run workers at scale in your cluster">
+    Deploy [NIKA GeoEngine](/geoengine/overview) on Kubernetes for GPU and high-memory pools, batch fan-out and role-based access, then pair it with OnlyMap JS to [build fullstack map processing](/geoengine/onlymap-fullstack).
   </Step>
   <Step title="Connect processing to GIS users">
     After publishing a worker, use the [QGIS](/nika-geoengine/qgis) or [ArcGIS Pro](/nika-geoengine/arcgis) integration so GIS users can run it without managing the local runtime themselves.
@@ -33,7 +40,7 @@ NIKA's Developer Platform has two complementary tools. **OnlyMap JS** is the fro
 
 ## Frontend and backend, clearly separated
 
-OnlyMap JS owns the map interface: it renders data, responds to user interaction, and presents a geospatial experience in the browser. GeoEngine owns processing: it gives each worker its declared dependencies, compute environment, version history, tests, and deployment path.
+OnlyMap JS owns the map interface: it renders data, responds to user interaction, and presents a geospatial experience in the browser. GeoEngine CLI and NIKA GeoEngine own processing: they give each worker its declared dependencies, compute environment, version history, tests, and deployment path.
 
-Use either independently. Use both when an application needs a rich map interface alongside repeatable, compute-intensive geoprocessing.
+Use any of them independently. Combine them when an application needs a rich map interface alongside repeatable, compute-intensive geoprocessing: build and test workers with GeoEngine CLI, run them at scale with NIKA GeoEngine, and show the results with OnlyMap JS.
 

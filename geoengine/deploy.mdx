@@ -1,0 +1,189 @@
+---
+title: "Deploy NIKA GeoEngine on Kubernetes: Plan, Install, Operate"
+sidebarTitle: "Deploy and operate"
+description: "Prepare node pools, GPU nodes, shared storage and a namespace, install NIKA GeoEngine with guided deployment, verify it, then scale and troubleshoot."
+---
+
+Take a cluster from prepared to verified, then run it day to day. Most problems come from the cluster, not the platform, so settle the plan before you install.
+
+<Warning>
+  **A licence is required before you deploy.** NIKA GeoEngine runs under a licence issued for your cluster, and the install artefacts are issued only once that licence is in place.
+</Warning>
+
+<Card title="Contact sales for licence details" icon="envelope" href="mailto:sales@nikaplanet.com?subject=NIKA%20GeoEngine%20licence" horizontal>
+  Email sales@nikaplanet.com about licence options and to schedule a guided deployment.
+</Card>
+
+<Steps>
+  <Step title="Plan">Node pools, storage and network.</Step>
+  <Step title="Install">Guided deployment with NIKA engineers.</Step>
+  <Step title="Verify">Prove each part works.</Step>
+  <Step title="Operate">Scale, upgrade and fix.</Step>
+</Steps>
+
+## 1. Plan your cluster
+
+- A Kubernetes cluster you administer, with `kubectl` access
+- Separate node pools for CPU, high-memory and, if needed, GPU work (x86-64)
+- Shared storage that many pods can read at once
+- Ingress with TLS and a DNS name for the gateway
+- Outbound access to pull images, or a mirror registry on restricted networks
+- A dedicated namespace with a quota
+
+### Node pools
+
+| Pool | For | Sizing |
+|---|---|---|
+| **CPU** | Conversion, reprojection, vector work, light raster work | Many mid-sized nodes. Width beats size. |
+| **High-memory** | Large rasters, data cubes, mosaics | Size to your largest single task, not the average. |
+| **GPU** | Deep-learning inference, CUDA-accelerated analysis | One GPU model per pool, so requests are unambiguous. |
+
+Label and taint each pool so nothing lands on it by accident:
+
+```bash
+kubectl label node <node-name> pool=highmem
+kubectl taint node <gpu-node-name> nvidia.com/gpu=present:NoSchedule
+```
+
+### Autoscaling
+
+NIKA GeoEngine asks for pods; your node autoscaler (Cluster Autoscaler or Karpenter) supplies nodes. Set a **maximum size per pool**. It is your cost ceiling: at the maximum, new tasks wait rather than overspend.
+
+### GPU nodes
+
+1. Install the NVIDIA driver, directly or with the NVIDIA GPU Operator.
+2. Install the NVIDIA device plugin so pods can request `nvidia.com/gpu`.
+3. Confirm the cluster advertises GPUs:
+
+```bash
+kubectl get nodes -o "custom-columns=NAME:.metadata.name,GPU:.status.allocatable.nvidia\.com/gpu"
+```
+
+You never install CUDA libraries or GDAL on nodes. They ship in the geo runtime inside each worker image; nodes only need the driver.
+
+### Shared storage
+
+Fan-out means many pods read the same inputs at once. Provide a **ReadWriteMany** volume (NFS, CephFS, Amazon EFS, Google Filestore, Azure Files) or an **object store** (S3-compatible, GCS, Azure Blob). For raster work throughput matters more than capacity, so test with a realistic scene. Object storage also lets maps and imagery servers read results directly; see [Build fullstack map processing with OnlyMapJS](/geoengine/onlymap-fullstack).
+
+### Isolate the namespace
+
+```yaml namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: geoengine
+---
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: geoengine-quota
+  namespace: geoengine
+spec:
+  hard:
+    requests.cpu: "400"
+    requests.memory: 1600Gi
+    requests.nvidia.com/gpu: "8"
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: geoengine
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+```
+
+Adjust the quota to your pools. With default-deny in place, allow your ingress controller to reach the gateway explicitly.
+
+## 2. Install
+
+<Info>
+  **Guided deployment.** NIKA engineers deploy NIKA GeoEngine into your cluster with you, issue the install artefacts for your environment and review the configuration. This section shows the shape of the process so you can prepare.
+</Info>
+
+| You provide | NIKA provides |
+|---|---|
+| Cluster admin access | Install artefacts and image access |
+| Node pools, storage and ingress from the checklist | A licence for your cluster |
+| A DNS name and TLS certificate | Preset workers and a configuration review |
+
+| You decide | Options |
+|---|---|
+| **Gateway** | Hostname, certificate, which ingress controller |
+| **Machine classes** | Which pool each class maps to, by the labels and taints you applied |
+| **Storage** | Storage class or object store for inputs and results |
+| **Identity** | How users and roles reach the platform |
+
+```bash
+# 1. Give the cluster access to NIKA images
+kubectl create secret docker-registry nika-registry \
+  --namespace geoengine \
+  --docker-server=<registry-host> \
+  --docker-username=<username> \
+  --docker-password=<token>
+
+# 2. Install with the artefacts issued for your release
+<install-command> --namespace geoengine --values values.yaml
+```
+
+The registry, install command and values reference are issued during guided deployment.
+
+
+## 3. Verify
+
+<Steps>
+  <Step title="The control plane is running">
+    `kubectl get pods --namespace geoengine`: every pod is `Running`.
+  </Step>
+  <Step title="The gateway answers over TLS">
+    `curl -sS https://<geoengine-host>/ -o /dev/null -w "%{http_code}\n"`: any HTTP status proves DNS, TLS and ingress.
+  </Step>
+  <Step title="Each machine class schedules">
+    Run one small job per class and watch its pod leave `Pending`.
+  </Step>
+  <Step title="Storage works end to end">
+    Read the job's result back from shared storage.
+  </Step>
+</Steps>
+
+## 4. Operate
+
+### Scale
+
+- **Out:** queued tasks for a full pool make the autoscaler add a node of that pool's type.
+- **In:** idle nodes are removed. Match the scale-down delay to task length so you neither churn nodes nor pay for idle GPUs.
+- **Ceiling:** each pool's maximum and the namespace quota stop one batch from taking the cluster.
+
+To decide *what size* each class should be, use the run records on the [Observability](/geoengine/observability) page.
+
+### Upgrade
+
+Read the release notes, apply the new artefacts with your existing values in a maintenance window, then repeat the Verify steps. Worker versions are immutable and pinned by jobs, so an upgrade never changes a completed result.
+
+### Troubleshoot
+
+<AccordionGroup>
+  <Accordion title="Tasks stay in Pending">
+    ```bash
+    kubectl describe pod <pod-name> --namespace geoengine
+    ```
+    - `Insufficient cpu` or `memory`: the pool is full. Check its maximum.
+    - `Insufficient nvidia.com/gpu`: no GPU free, or the device plugin is not advertising GPUs.
+    - `untolerated taint`: check the machine class to pool mapping.
+    - `exceeded quota`: raise the quota or wait for tasks to finish.
+  </Accordion>
+  <Accordion title="Tasks end with OOMKilled">
+    The worker used more memory than its class allows. Read the run's peak memory on the [Observability](/geoengine/observability) page, then move up a class or tile the input.
+  </Accordion>
+  <Accordion title="ImagePullBackOff">
+    Check the pull secret exists in the namespace, the registry is reachable from nodes, and any mirror holds the image.
+  </Accordion>
+  <Accordion title="A job is rejected immediately">
+    The gateway refused it. Check the caller holds a role granted for a restricted worker, and that the exact version exists.
+  </Accordion>
+  <Accordion title="A task fails but its pod started">
+    The worker's own code exited non-zero. Read the task log and rerun the same inputs locally with GeoEngine CLI.
+  </Accordion>
+</AccordionGroup>
