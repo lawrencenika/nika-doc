@@ -366,7 +366,7 @@ The SVGs in `images/geoengine/` (one light and one dark file per diagram) are bu
 `python3 scripts/geoengine-docs/build_diagrams.py` from the repo root; never hand-edit the SVGs.
 Pages embed them with plain `<img>` tags (`block dark:hidden` / `hidden dark:block`), so
 they are server-rendered, cached across pages and cost no JavaScript. The only global CSS is
-the ~2 KB `geoengine.css` (the overview title chip, the phone/desktop diagram swap and the chart slots);
+the ~2.5 KB `geoengine.css` (the overview title chip, the phone/desktop diagram swap, the chart slots and the one-column text cards);
 keep it that small, because Mintlify inlines every root `.css` file into every page. The interactive charts on
 `geoengine/observability.mdx` live in `snippets/geoengine/charts.jsx` and inject their own
 styles only on that page. Mintlify does not serve `.html` files in production (they 404), so the

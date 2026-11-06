@@ -1,4 +1,4 @@
-/* NIKA GeoEngine docs: small page-level rules (under 2 KB in total).
+/* NIKA GeoEngine docs: small page-level rules (about 2.5 KB in total).
    1. "Previously called NIKA Worker" chip beside the title of /geoengine/overview only.
    The same wording is in the page body, so nothing is lost if Mintlify's header markup changes. */
 #content-area:has([data-page-href="/geoengine/overview"]) #page-title::after {
@@ -39,4 +39,14 @@ img.ge-v.ge-wide.ge-light { display: block; }
   .ge-slot-run { aspect-ratio: auto; min-height: 450px; }
   .ge-slot-hist { aspect-ratio: auto; min-height: 360px; }
   .ge-slot-bullet { aspect-ratio: auto; min-height: 360px; }
+}
+
+/* 4. Text-heavy card grids (use cases, vendor rules): one column until their own column is wide
+   enough for two readable cards. Mintlify switches CardGroup to two columns at a 640px viewport,
+   which squeezes long cards on landscape phones and small tablets.
+   Mintlify's grid rule is a layered !important, so override the --cols it reads instead. */
+.ge-text-cards { container-type: inline-size; }
+.ge-text-cards .card-group { --cols: 1 !important; }
+@container (min-width: 800px) {
+  .ge-text-cards .card-group { --cols: 2 !important; }
 }

@@ -10,12 +10,14 @@ Keep the tools you already run. Call NIKA GeoEngine from Argo Workflows, Kubeflo
 
 Every pattern on this page keeps each product inside its own licence terms.
 
+<div className="ge-text-cards">
 <CardGroup cols={2}>
   <Card title="Each product's own installer" icon="box-open">FME Flow with Safe Software's Helm chart, ArcGIS Enterprise on Kubernetes with Esri's deployment tools. NIKA GeoEngine never repackages, redistributes or wraps another vendor's software.</Card>
   <Card title="Your licence, your seat count" icon="id-card">Each product runs under the licence you hold for it, and the vendor's own engine and core limits keep applying.</Card>
   <Card title="Documented interfaces only" icon="plug">Public REST APIs, webhooks and shared storage formats such as Cloud-Optimised GeoTIFF. No private endpoints, and no automating desktop products.</Card>
   <Card title="Separate namespaces and nodes" icon="layer-group">Each product gets its own namespace, quota and node pool, so neither starves the other.</Card>
 </CardGroup>
+</div>
 
 <Warning>
   **FME: use FME Flow for automation.** Safe Software's licence does not allow FME Form (formerly FME Desktop) to be used as a stand-alone translation service for others. Server-side automation belongs on FME Flow. Never run FME Form inside a worker. Confirm your use with Safe Software if it is unusual.
