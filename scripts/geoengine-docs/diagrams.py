@@ -90,7 +90,7 @@ def d1():
     # who submits
     b.append(group(10, 10, 210, 600, "Who submits work"))
     b.append(box(26, 58, 178, 62, "Apps and maps", "OnlyMap · API · CLI"))
-    b.append(box(26, 140, 178, 62, "Pipeline tools", "Argo · Kubeflow · FME Flow"))
+    b.append(box(26, 140, 178, 62, "Pipeline tools", "FME Flow · your pipelines"))
     b.append(box(26, 222, 178, 62, "Scripts and services", "scheduled or on demand"))
     b.append(text(26, 330, "PEOPLE AND ROLES", "t tg", "start"))
     b.append('<circle cx="40" cy="356" r="7" class="role ok"/>' + text(54, 361, "Cleared analysts", "t ts2", "start"))
@@ -158,7 +158,7 @@ def d1():
 def d1_tall():
     b = []
     b.append(group(10, 10, 440, 236, "Who submits work"))
-    for y, t, sub in [(46, "Apps and maps", "OnlyMap · API · CLI"), (94, "Pipeline tools", "Argo · Kubeflow · FME Flow"), (142, "Scripts and services", "scheduled or on demand")]:
+    for y, t, sub in [(46, "Apps and maps", "OnlyMap · API · CLI"), (94, "Pipeline tools", "FME Flow · your pipelines"), (142, "Scripts and services", "scheduled or on demand")]:
         b.append(f'<rect x="26" y="{y}" width="408" height="40" rx="10" class="b"/>')
         b.append(text(42, y + 25, t, "t tb", "start"))
         b.append(text(420, y + 25, sub, "t ts", "end"))
@@ -277,7 +277,7 @@ def d2():
 def d4():
     b = []
     b.append(group(10, 10, 740, 130, "Where work comes from"))
-    tops = [("Map apps", "OnlyMap front ends"), ("Argo Workflows", "steps and triggers"), ("Kubeflow Pipelines", "ML and data pipelines"), ("FME Flow", "workspaces · Automations")]
+    tops = [("Map apps", "OnlyMap front ends"), ("FME Flow", "workspaces · Automations"), ("Your pipelines", "schedulers and triggers"), ("Scripts and services", "any HTTPS client")]
     for i, (t, s) in enumerate(tops):
         b.append(box(28 + i * 180, 50, 164, 64, t, s))
         b.append(arrow([(110 + i * 180, 114), (110 + i * 180, 186)], False, "a flow"))
@@ -291,7 +291,7 @@ def d4():
     b.append(text(551, 308, "reads", "t ts"))
     b.append(group(10, 400, 740, 66, "Infrastructure"))
     b.append(box(200, 414, 540, 40, "Kubernetes · nodes · GPUs · volumes"))
-    return svg(760, 476, "".join(b), f"Map apps, Argo, Kubeflow and FME Flow submit work to {NAME}; it writes results to storage that imagery servers and maps read; everything runs on Kubernetes")
+    return svg(760, 476, "".join(b), f"Map apps, FME Flow, your pipelines and scripts submit work to {NAME}; it writes results to storage that imagery servers and maps read; everything runs on Kubernetes")
 
 
 # ------------------------------------------------------------------ D5 batch fan-out
@@ -439,7 +439,7 @@ def d2_tall():
 def d4_tall():
     b = []
     b.append(group(10, 10, 440, 170, "Where work comes from"))
-    for i, (t, sub) in enumerate([("Map apps", "OnlyMap front ends"), ("Argo Workflows", "steps and triggers"), ("Kubeflow Pipelines", "ML and data pipelines"), ("FME Flow", "workspaces · Automations")]):
+    for i, (t, sub) in enumerate([("Map apps", "OnlyMap front ends"), ("FME Flow", "workspaces · Automations"), ("Your pipelines", "schedulers and triggers"), ("Scripts and services", "any HTTPS client")]):
         x, y = 26 + (i % 2) * 208, 46 + (i // 2) * 64
         b.append(box(x, y, 200, 56, t, sub))
     b.append(arrow([(230, 180), (230, 210)], False, "a flow"))

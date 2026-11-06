@@ -90,7 +90,7 @@ The whole map is markup. Your app API proxies two calls to NIKA GeoEngine: creat
   <Card title="Flood extent within hours" icon="water">
     **Need:** where the water is after a storm, while clouds still cover optical satellites.
 
-    **Backend:** Argo Events starts a batch job when a Sentinel-1 radar scene lands; a CPU worker compares it with a dry baseline, tile by tile.
+    **Backend:** your pipeline starts a batch job when a Sentinel-1 radar scene lands; a CPU worker compares it with a dry baseline, tile by tile.
 
     **On the map:** the flood mask over the satellite basemap, with affected roads and facilities as `PopupLayer` badges. Try <a href="https://onlymap.nikaplanet.com/label-many-features/" target="_blank" rel="noopener noreferrer">labelling many features</a>.
   </Card>
@@ -138,7 +138,7 @@ The whole map is markup. Your app API proxies two calls to NIKA GeoEngine: creat
 
 <CardGroup cols={3}>
   <Card title="Build your first worker" icon="cube" href="/geoengine/workers">Manifest, inputs and batch habits.</Card>
-  <Card title="Connect your pipeline" icon="plug" href="/geoengine/integrations">Argo, Kubeflow, FME Flow, ArcGIS.</Card>
+  <Card title="Connect your pipeline" icon="plug" href="/geoengine/integrations">Your pipelines, FME Flow, ArcGIS.</Card>
   <Card title="OnlyMap JS docs" icon="map" href="/onlymap/overview">Layers, widgets and live data.</Card>
 </CardGroup>
 
