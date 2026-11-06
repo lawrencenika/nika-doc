@@ -333,7 +333,7 @@ which this site mentioned. A claim that "the docs were updated" is only true if
 | `onlymap/cartographs.mdx` | the cartograph entry: frames and their sources, atlas, export, credit; **the CDN pin in its install snippet** |
 | `onlymap/licensing-and-telemetry.mdx` | free-plan limits, the badge and `keep-badge`, the sheet credit |
 | `onlymap/react-native.mdx`, `onlymap/remotion.mdx` | the two sibling packages, each with its own version |
-| `geoengine/onlymap-fullstack.mdx`, `geoengine/onlymap-demo.html` | the OnlyMap side of the NIKA GeoEngine pairing: **two more CDN pins**, plus the `COGLayer`/`ZarrLayer`, `refresh` and `OmMap.configureData` behaviour it describes (including that raster layers do not route through `configureData`) |
+| `geoengine/onlymap-fullstack.mdx`, `scripts/geoengine-docs/onlymap-demo.html` (re-run `build_diagrams.py` after editing) | the OnlyMap side of the NIKA GeoEngine pairing: **two more CDN pins**, plus the `COGLayer`/`ZarrLayer`, `refresh` and `OmMap.configureData` behaviour it describes (including that raster layers do not route through `configureData`) |
 
 **The ritual, on every core release** (or when asked to "update the docs"):
 
@@ -345,9 +345,9 @@ which this site mentioned. A claim that "the docs were updated" is only true if
 2. Touch every page in the table that restates the affected surface. Tag new
    capabilities `<sup>new in X.Y.Z</sup>`, the house convention.
 3. Move the CDN pins in `onlymap/cartographs.mdx`, `geoengine/onlymap-fullstack.mdx` and
-   `geoengine/onlymap-demo.html` to the released version. A stale pin
+   `scripts/geoengine-docs/onlymap-demo.html` (then re-run `build_diagrams.py`) to the released version. A stale pin
    teaches the reader to install a version without the feature documented beside it.
-4. Check mechanically, not from memory: `grep -rn "onlymap@0\." onlymap/ geoengine/` must show only
+4. Check mechanically, not from memory: `grep -rn "onlymap@0\." onlymap/ geoengine/ scripts/geoengine-docs/` must show only
    the current version (plus the historical "0.6.19 or later" note in the overview), and
    a grep for each new attribute or element name from the changelog must find at least
    one page.
@@ -369,5 +369,6 @@ they are server-rendered, cached across pages and cost no JavaScript. The only g
 the ~2 KB `geoengine.css` (the overview title chip, the phone/desktop diagram swap and the chart slots);
 keep it that small, because Mintlify inlines every root `.css` file into every page. The interactive charts on
 `geoengine/observability.mdx` live in `snippets/geoengine/charts.jsx` and inject their own
-styles only on that page. "NIKA GeoEngine" is the Kubernetes product; the command-line tool is
+styles only on that page. Mintlify does not serve `.html` files in production (they 404), so the
+OnlyMap demo is embedded as an iframe `srcDoc` from the generated `snippets/geoengine/onlymap-demo.jsx`. "NIKA GeoEngine" is the Kubernetes product; the command-line tool is
 "NIKA GeoEngine CLI" (pages under `nika-geoengine/` and `guides/custom-geoprocess-*`).

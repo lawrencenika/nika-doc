@@ -5,7 +5,9 @@ mode: "wide"
 description: "Pair OnlyMap JS in the browser with NIKA GeoEngine on Kubernetes: run satellite imagery batch jobs from a map and stream COG results with no tile server."
 ---
 
-Most geo applications need two halves: a front end that makes large data easy to explore, and a backend that can actually process it. [OnlyMap JS](/onlymap/overview) is the first, NIKA GeoEngine is the second, and they are built to meet in the middle.
+import { GE_ONLYMAP_DEMO_HTML } from "/snippets/geoengine/onlymap-demo.jsx";
+
+Most geo applications need two halves: a front end that makes large data easy to explore, and a backend that can actually process it. [OnlyMap JS](/onlymap/overview) is the first, NIKA GeoEngine is the second, and they are built to meet in the middle. For more live OnlyMap maps, browse the examples on <a href="https://onlymap.nikaplanet.com/" target="_blank" rel="noopener noreferrer">onlymap.nikaplanet.com ↗</a>.
 
 <Columns cols={2}>
   <Card title="Front end: OnlyMap JS" icon="map">Projection-aware WebGL maps from declarative HTML. Streams COG and Zarr rasters straight from storage, and polls live data.</Card>
@@ -21,8 +23,8 @@ Most geo applications need two halves: a front end that makes large data easy to
   <img className="ge-v ge-tall ge-dark" src="/images/geoengine/onlymap-flow-tall-dark.svg" alt="" width="460" height="646" loading="lazy" style={{ width: "100%", height: "auto" }} />
 </Frame>
 
-- **No tile server in between.** Workers write Cloud-Optimised GeoTIFF or Zarr; OnlyMap's `COGLayer` and `ZarrLayer` read only the parts on screen, by HTTP range request.
-- **Progress is just data.** A layer with `refresh="2s"` polls the job's task list, so tiles light up on the map as tasks finish.
+- **No tile server in between.** Workers write Cloud-Optimised GeoTIFF or Zarr; OnlyMap's `COGLayer` and `ZarrLayer` read only the parts on screen, by HTTP range request. See <a href="https://onlymap.nikaplanet.com/display-a-geotiff/" target="_blank" rel="noopener noreferrer">a COG</a> and <a href="https://onlymap.nikaplanet.com/slice-a-zarr-cube/" target="_blank" rel="noopener noreferrer">a Zarr cube</a> live.
+- **Progress is just data.** A layer with `refresh="2s"` polls the job's task list, so tiles light up on the map as tasks finish. <a href="https://onlymap.nikaplanet.com/san-francisco-last-mile/" target="_blank" rel="noopener noreferrer">See polling live ↗</a>.
 - **Credentials stay out of markup.** `OmMap.configureData()` adds your token to every data-layer request, polling included, so the task list can sit behind your app's authentication.
 - **Rasters are fetched directly by the browser.** `COGLayer` and `ZarrLayer` do not route through `configureData`. Serve COG results same-origin through your app, where the browser sends the user's session cookie, or from a CORS-enabled store. Authenticated Zarr stores are not supported yet, so use Zarr for results that may be public and COG behind your app for sensitive ones.
 - **Access control carries through.** A user who isn't cleared for a restricted worker is refused at the gateway, and the map says so.
@@ -31,9 +33,9 @@ Most geo applications need two halves: a front end that makes large data easy to
 
 Pick a scenario and run a batch job. Each square is one task on one pod. Switch the scenario to **New-building detection** and run it as an **Analyst** to see a restricted worker refused.
 
-<div className="ge-demo">
+<div style={{ borderRadius: "12px", overflow: "hidden", border: "1px solid rgba(127,127,127,0.25)", boxShadow: "0 10px 30px rgba(0,0,0,0.15)" }}>
   <iframe
-    src="/geoengine/onlymap-demo.html"
+    srcDoc={GE_ONLYMAP_DEMO_HTML}
     title="OnlyMap JS on NIKA GeoEngine demo"
     width="100%"
     height="560"
@@ -44,7 +46,7 @@ Pick a scenario and run a batch job. Each square is one task on one pod. Switch 
 </div>
 
 <p style={{ marginTop: "10px", fontSize: "14px" }}>
-  Demo: the backend's responses are simulated in the page. The map, layers and polling are real OnlyMap JS. <a href="/geoengine/onlymap-demo.html" target="_blank" rel="noopener noreferrer">Open the demo full screen &rarr;</a>
+  Demo: the backend's responses are simulated in the page. The map, layers and polling are real OnlyMap JS. For more maps you can play with, see <a href="https://onlymap.nikaplanet.com/" target="_blank" rel="noopener noreferrer">the OnlyMap examples ↗</a>.
 </p>
 
 ## The front-end code
@@ -82,14 +84,14 @@ The whole map is markup. Your app API proxies two calls to NIKA GeoEngine: creat
 
     **Backend:** `cloud-removal` builds a monthly Sentinel-2 composite per tile on the high-memory class; a second worker computes mean NDVI per field.
 
-    **On the map:** the composite as a `COGLayer`, fields coloured by NDVI, and a month slider with the `filter` widget.
+    **On the map:** the composite as a `COGLayer`, fields coloured by NDVI, and a month slider with the `filter` widget. Try <a href="https://onlymap.nikaplanet.com/display-a-geotiff/" target="_blank" rel="noopener noreferrer">a GeoTIFF</a> and <a href="https://onlymap.nikaplanet.com/filter-on-the-gpu/" target="_blank" rel="noopener noreferrer">GPU filtering</a>.
   </Card>
   <Card title="Flood extent within hours" icon="water">
     **Need:** where the water is after a storm, while clouds still cover optical satellites.
 
     **Backend:** Argo Events starts a batch job when a Sentinel-1 radar scene lands; a CPU worker compares it with a dry baseline, tile by tile.
 
-    **On the map:** the flood mask over the satellite basemap, with affected roads and facilities as `PopupLayer` badges.
+    **On the map:** the flood mask over the satellite basemap, with affected roads and facilities as `PopupLayer` badges. Try <a href="https://onlymap.nikaplanet.com/label-many-features/" target="_blank" rel="noopener noreferrer">labelling many features</a>.
   </Card>
   <Card title="New-building detection at sensitive sites" icon="lock">
     **Need:** flag construction across very high-resolution imagery of sites few people may see.
@@ -103,21 +105,21 @@ The whole map is markup. Your app API proxies two calls to NIKA GeoEngine: creat
 
     **Backend:** a CPU worker computes dNBR from pre- and post-fire Sentinel-2 scenes, fanned out per tile, and writes a classified COG.
 
-    **On the map:** a `COGLayer` with a threshold legend of severity classes, over shaded relief from `HillshadeLayer`.
+    **On the map:** a `COGLayer` with a threshold legend of severity classes, over shaded relief from `HillshadeLayer`. Try <a href="https://onlymap.nikaplanet.com/shade-the-terrain/" target="_blank" rel="noopener noreferrer">shaded relief</a>.
   </Card>
   <Card title="Heat stress from climate data cubes" icon="temperature-high">
     **Need:** district-level heat-stress days from decades of reanalysis data.
 
     **Backend:** a high-memory worker reads the cube, computes the index per year and writes a public, CORS-enabled Zarr store plus a district table.
 
-    **On the map:** a `ZarrLayer` with a year selector, beside a district choropleth and a chart widget.
+    **On the map:** a `ZarrLayer` with a year selector, beside a district choropleth and a chart widget. Try <a href="https://onlymap.nikaplanet.com/slice-a-zarr-cube/" target="_blank" rel="noopener noreferrer">slicing a Zarr cube</a>.
   </Card>
   <Card title="Drone inspection of solar farms" icon="solar-panel">
     **Need:** find failing panels from thousands of thermal drone photos per site.
 
     **Backend:** a GPU worker builds the orthomosaic and detects hot spots, one batch per flight.
 
-    **On the map:** the orthomosaic as a `COGLayer`, each original photo as a geotagged `ImageOverlay`, and defects clustered by row.
+    **On the map:** the orthomosaic as a `COGLayer`, each original photo as a geotagged `ImageOverlay`, and defects clustered by row. Try <a href="https://onlymap.nikaplanet.com/place-a-drone-photo/" target="_blank" rel="noopener noreferrer">placing a drone photo</a> and <a href="https://onlymap.nikaplanet.com/cluster-points/" target="_blank" rel="noopener noreferrer">clustering points</a>.
   </Card>
 </CardGroup>
 
@@ -137,3 +139,5 @@ The whole map is markup. Your app API proxies two calls to NIKA GeoEngine: creat
   <Card title="Connect your pipeline" icon="plug" href="/geoengine/integrations">Argo, Kubeflow, FME Flow, ArcGIS.</Card>
   <Card title="OnlyMap JS docs" icon="map" href="/onlymap/overview">Layers, widgets and live data.</Card>
 </CardGroup>
+
+More than 70 live OnlyMap examples, from GeoTIFFs and Zarr cubes to live tracking and 3D, are on <a href="https://onlymap.nikaplanet.com/" target="_blank" rel="noopener noreferrer">onlymap.nikaplanet.com ↗</a>.
